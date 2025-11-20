@@ -1,25 +1,48 @@
-# Load your dataset
-lobster <- read_csv("data/lobster.csv")
-# Clean the data
-lobster <- lobster %>%
-  filter(!is.na(INT), INT > 0, !is.na(PL), !is.na(NINT), !is.na(SEX))
-# Function to fit model and plot diagnostics
-plot_diagnostics_by_sex <- function(data, sex_label) {
-  # Fit Gamma GLM with spline terms
-  model <- glm(INT ~ ns(PL, df = 3) + ns(NINT, df = 3),
-               data = data, family = Gamma(link = "log"))
-  # Set up plotting area
-  par(mfrow = c(2, 2))
-  plot(model, which = 1, main = paste("Residuals vs Fitted -", sex_label))
-  plot(model, which = 2, main = paste("QQ Plot -", sex_label))
-  plot(model, which = 3, main = paste("Scale-Location -", sex_label))
-  plot(model, which = 4, main = paste("Residuals vs Leverage -", sex_label))
-  # Optionally return model if needed
-  return(model)
-}
-# Fit and plot for females
-lobster_female <- filter(lobster, SEX == 1)
-model_female <- plot_diagnostics_by_sex(lobster_female, "Female")
-# Fit and plot for males
-lobster_male <- filter(lobster, SEX == 2)
-model_male <- plot_diagnostics_by_sex(lobster_male, "Male")
+
+library(readr)
+library(dplyr)
+library(splines)
+
+# If SEX is numeric 1/2, first make it labelled:
+# lobster <- lobster |>
+#   mutate(SEX = factor(SEX, levels = c(1, 2), labels = c("Female", "Male")))
+
+# Split by sex using factor labels
+lobster_female <- filter(lobster, SEX == "Female")
+lobster_male   <- filter(lobster, SEX == "Male")
+
+# Fit Gamma GLMs with spline terms
+model_female <- glm(
+  INT ~ ns(PL, df = 3) + ns(NINT, df = 3),
+  data   = lobster_female,
+  family = Gamma(link = "log")
+)
+
+model_male <- glm(
+  INT ~ ns(PL, df = 3) + ns(NINT, df = 3),
+  data   = lobster_male,
+  family = Gamma(link = "log")
+)
+
+# --- FEMALE ----
+
+par(mfrow = c(2, 2))
+plot(model_female, which = 1,
+     main = "Residuals vs Fitted - Female")
+plot(model_female, which = 2,
+     main = "QQ Plot - Female")
+plot(model_female, which = 3,
+     main = "Scale-Location - Female")
+plot(model_female, which = 4,
+     main = "Residuals vs Leverage - Female")
+
+## Male (right 4 panels)
+par(mfrow=c(2,2))
+plot(model_male, which = 1,
+     main = "Residuals vs Fitted - Male")
+plot(model_male, which = 2,
+     main = "QQ Plot - Male")
+plot(model_male, which = 3,
+     main = "Scale-Location - Male")
+plot(model_male, which = 4,
+     main = "Residuals vs Leverage - Male")
