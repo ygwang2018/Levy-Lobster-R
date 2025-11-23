@@ -1,8 +1,4 @@
 dat<-lobster
-# ---------------------------
-# Function definitions
-# ---------------------------
-
 ff <- function(Linf, k, zeta, miu, sigma, Xi, Ti, Li) {
   gLinf <- 0
   ni <- length(Xi)
@@ -46,16 +42,11 @@ LL <- function(theta, dat, MinLinf, MaxLinf) {
   return(-all.LL)
 }
 
-# ---------------------------
-# Setup shared parameters
-# ---------------------------
 MinLinf <- 160
 MaxLinf <- 200
 init_theta <- c(0.1, 4, 1, 2.88)
 
-# ---------------------------
 # Female
-# ---------------------------
 dat <- lobster
 dat_female <- dat[dat$SEX == 1, ]
 
@@ -73,19 +64,14 @@ num_params <- 4
 AIC_female <- 2 * (-logL_female) + 2 * num_params
 Linf_female <- exp(val_female[3] + (val_female[4]^2) / 2)
 
-cat("\n========== Female Results ==========\n")
-cat("Convergence:", res_female$convergence == 0, "\n")
-cat("Message:", res_female$message, "\n")
-cat("Log-likelihood:", logL_female, "\n")
-cat("AIC:", AIC_female, "\n")
-cat("Estimated Linf:", Linf_female, "\n")
-cat("Parameters: k =", val_female[1], ", zeta =", val_female[2], 
-    ", miu =", val_female[3], ", sigma =", val_female[4], "\n")
-cat("====================================\n")
+#####. Female Results 
+print("Convergence:", res_female$convergence == 0)
+print( AIC_female)
+print( Linf_female)
+print(paste( "k =", val_female[1], "zeta =", val_female[2], 
+    "miu =", val_female[3], "sigma =", val_female[4]))
 
-# ---------------------------
 # Male
-# ---------------------------
 dat <- lobster
 dat_male <- dat[dat$SEX == 2, ]
 
@@ -98,16 +84,13 @@ res_male <- optim(init_theta, LL, dat = dat_male,
 
 val_male <- res_male$par
 neg_logL_male <- res_male$value
-logL_male <- -neg_logL_male
+logL_male <- -neg_logL_male 
 AIC_male <- 2 * (-logL_male) + 2 * num_params
 Linf_male <- exp(val_male[3] + (val_male[4]^2) / 2)
 
-cat("\n========== Male Results ==========\n")
-cat("Convergence:", res_male$convergence == 0, "\n")
-cat("Message:", res_male$message, "\n")
-cat("Log-likelihood:", logL_male, "\n")
-cat("AIC:", AIC_male, "\n")
-cat("Estimated Linf:", Linf_male, "\n")
-cat("Parameters: k =", val_male[1], ", zeta =", val_male[2], 
-    ", miu =", val_male[3], ", sigma =", val_male[4], "\n")
-cat("==================================\n")
+#########. Male Results 
+print("Convergence:", res_male$convergence == 0)
+print("AIC:", AIC_male)
+print("Estimated Linf:", Linf_male)
+print(paste("k =", val_male[1], "zeta =", val_male[2], 
+    "miu =", val_male[3],  "sigma =", val_male[4]))
