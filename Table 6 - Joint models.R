@@ -90,7 +90,7 @@ Linf_male <- exp(val_male[3] + (val_male[4]^2) / 2)
 
 #########. Male Results 
 print("Convergence:", res_male$convergence == 0)
-print("AIC:", AIC_male)
-print("Estimated Linf:", Linf_male)
+print( AIC_male)
+print(Linf_male)
 print(paste("k =", val_male[1], "zeta =", val_male[2], 
     "miu =", val_male[3],  "sigma =", val_male[4]))
