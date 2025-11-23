@@ -1,6 +1,3 @@
-# ----------------------------------------
-# New independent likelihood function with k in MI
-# ----------------------------------------
 independent_likelihood_kMI <- function(params, data) {
   Linf  <- params[1]
   k     <- params[2]
@@ -47,25 +44,16 @@ independent_likelihood_kMI <- function(params, data) {
   return(neg_loglik)
 }
 
-# ----------------------------------------
-# Prepare data subsets
-# ----------------------------------------
 data_female <- subset(data, SEX == 1)
 data_male   <- subset(data, SEX == 2)
 
-# ----------------------------------------
-# Starting parameter values (safe)
-# ----------------------------------------
 init_params <- c(Linf = 185, k = 0.3, lambda = 1, 
                  beta0 = -1, beta1 = 0, beta2 = 0, phi = 2)
 
 lower_bounds <- c(150, 0.01, 0.01, -10, -0.01, -0.0001, 0.1)
 upper_bounds <- c(220, 1,   20,    10,  0.01,  0.0001, 20)
 
-# ----------------------------------------
 # Female
-# ----------------------------------------
-cat("\n========== Female ==========\n")
 
 fit_female <- optim(par = init_params,
                     fn = independent_likelihood_kMI,
@@ -78,23 +66,19 @@ fit_female <- optim(par = init_params,
 num_params <- length(fit_female$par)
 AIC_female <- 2 * fit_female$value + 2 * num_params
 
-cat("AIC    =", AIC_female, "\n")
-cat("Neg Log-likelihood =", fit_female$value, "\n")
-cat("Convergence =", fit_female$convergence == 0, "\n")
-cat("Message:", fit_female$message, "\n")
-cat("Linf =", fit_female$par["Linf"], "\n")
-cat("k (MI) =", fit_female$par["k"], "\n")
-cat("lambda =", fit_female$par["lambda"], "\n")
-cat("beta0 =", fit_female$par["beta0"], "\n")
-cat("beta1 =", fit_female$par["beta1"], "\n")
-cat("beta2 =", fit_female$par["beta2"], "\n")
-cat("phi   =", fit_female$par["phi"], "\n")
+print("AIC    =", AIC_female)
+print("Neg Log-likelihood =", fit_female$value)
+print("Convergence =", fit_female$convergence == 0)
+print("Linf =", fit_female$par["Linf")
+print("k (MI) =", fit_female$par["k"])
+print("lambda =", fit_female$par["lambda"])
+print("beta0 =", fit_female$par["beta0"])
+print("beta1 =", fit_female$par["beta1"])
+print("beta2 =", fit_female$par["beta2"])
+print("phi   =", fit_female$par["phi"])
 
-# ----------------------------------------
+                               
 # Male
-# ----------------------------------------
-cat("\n========== Male ==========\n")
-
 fit_male <- optim(par = init_params,
                   fn = independent_likelihood_kMI,
                   data = data_male,
@@ -105,14 +89,12 @@ fit_male <- optim(par = init_params,
 
 AIC_male <- 2 * fit_male$value + 2 * num_params
 
-cat("AIC    =", AIC_male, "\n")
-cat("Neg Log-likelihood =", fit_male$value, "\n")
-cat("Convergence =", fit_male$convergence == 0, "\n")
-cat("Message:", fit_male$message, "\n")
-cat("Linf =", fit_male$par["Linf"], "\n")
-cat("k (MI) =", fit_male$par["k"], "\n")
-cat("lambda =", fit_male$par["lambda"], "\n")
-cat("beta0 =", fit_male$par["beta0"], "\n")
-cat("beta1 =", fit_male$par["beta1"], "\n")
-cat("beta2 =", fit_male$par["beta2"], "\n")
-cat("phi   =", fit_male$par["phi"], "\n")
+print("AIC    =", AIC_male)
+print("Convergence =", fit_male$convergence == 0)
+print("Linf =", fit_male$par["Linf"])
+print("k (MI) =", fit_male$par["k"])
+print("lambda =", fit_male$par["lambda"])
+print("beta0 =", fit_male$par["beta0"])
+print("beta1 =", fit_male$par["beta1"])
+print("beta2 =", fit_male$par["beta2"])
+print("phi   =", fit_male$par["phi"])
