@@ -1,0 +1,101 @@
+dat<-lobster
+f <- dat[dat$SEX == 1, ]
+T <- f$INT / 365.25
+I <- f$INC
+L <- f$PL
+N <- length(f[, 1])
+
+LL1 <- function(d) {
+  Linf   <- d[1]
+  lambda <- d[2]
+  k      <- d[3]
+
+  # Basic constraints
+  if (Linf <= max(L) + 1e-6) return(1e10)  # Linf must exceed all premoult lengths
+  if (lambda <= 0) return(1e10)
+  if (k <= 0) return(1e10)
+
+  # Mean increment μ_i = (Linf - L_i) (1 - e^{-kT_i})
+  mu <- (Linf - L) * (1 - exp(-k * T))
+
+  # Check positivity
+  if (any(mu <= 0) || any(I <= 0)) return(1e10)
+
+  aa <- lambda * mu   # Gamma shape
+
+  if (any(aa <= 0)) return(1e10)
+
+  # Log-likelihood (vectorised) – note lgamma, not log(gamma())
+  ll <- aa * log(lambda) +
+        (aa - 1) * log(I) -
+        lambda * I -
+        lgamma(aa)
+
+  return(-sum(ll))  # negative log-likelihood
+}
+
+# Optimisation with simple bounds
+res <- optim(
+  par    = c(180, 0.5, 0.01),  # better starting values than 160, .1, .001
+  fn     = LL1,
+  method = "L-BFGS-B",
+  lower  = c(160, 0.1, 0.01),
+  upper  = c(300, 1, 0.5)
+)$par
+
+Linf   <- res[1]
+lambda <- res[2]
+k      <- res[3]
+res
+
+######. MALE
+
+dat<-lobster
+f <- dat[dat$SEX == 2, ]
+T <- f$INT / 365.25
+I <- f$INC
+L <- f$PL
+N <- length(f[, 1])
+
+LL1 <- function(d) {
+  Linf   <- d[1]
+  lambda <- d[2]
+  k      <- d[3]
+  
+  # Basic constraints
+  if (Linf <= max(L) + 1e-6) return(1e10)  # Linf must exceed all premoult lengths
+  if (lambda <= 0) return(1e10)
+  if (k <= 0) return(1e10)
+  
+  # Mean increment μ_i = (Linf - L_i) (1 - e^{-kT_i})
+  mu <- (Linf - L) * (1 - exp(-k * T))
+  
+  # Check positivity
+  if (any(mu <= 0) || any(I <= 0)) return(1e10)
+  
+  aa <- lambda * mu   # Gamma shape
+  
+  if (any(aa <= 0)) return(1e10)
+  
+  # Log-likelihood (vectorised) – note lgamma, not log(gamma())
+  ll <- aa * log(lambda) +
+    (aa - 1) * log(I) -
+    lambda * I -
+    lgamma(aa)
+  
+  return(-sum(ll))  # negative log-likelihood
+}
+
+# Optimisation with simple bounds
+res <- optim(
+  par    = c(180, 0.5, 0.01),  # better starting values than 160, .1, .001
+  fn     = LL1,
+  method = "L-BFGS-B",
+  lower  = c(180, 0.1, 0.01),
+  upper  = c(300, 1, 0.5)
+)$par
+
+Linf   <- res[1]
+lambda <- res[2]
+k      <- res[3]
+res
