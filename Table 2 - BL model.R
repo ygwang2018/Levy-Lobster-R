@@ -2,8 +2,8 @@ dat<-lobster
 
 # SEX == 1 (Female)
 dat <- subset(dat, SEX == 1)
-MinLinf <- 100    # biologically required
-MaxLinf <- 200                   # wide enough
+MinLinf <- max(dat$PL + dat$INC) + 0.1   
+MaxLinf <- MinLinf + 80                  
 ff_ind <- function(Linf, k, zeta, mu, sigma, Xi, Ti, Li) {
   
   if (!is.finite(Linf) || Linf <= max(Li) + 1e-8)
@@ -126,8 +126,8 @@ Linf
 
 dat<-lobster
 dat <- dat[dat$SEX == 2, ]
-MinLinf <- max(dat$PL + dat$INC) + 0.1    # biologically required
-MaxLinf <- MinLinf + 80                   # wide enough
+MinLinf <- max(dat$PL + dat$INC) + 0.1   
+MaxLinf <- MinLinf + 80                  
 ff_ind <- function(Linf, k, zeta, mu, sigma, Xi, Ti, Li) {
   
   if (!is.finite(Linf) || Linf <= max(Li) + 1e-8)
@@ -240,3 +240,6 @@ p     <- length(init)
 
 AIC_value <- 2*negLL + 2*p
 AIC_value
+sig<- fit$par[4]
+Linf<-exp(fit$par[3]+sig^2/2)
+Linf
