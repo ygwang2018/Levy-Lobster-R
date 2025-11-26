@@ -116,8 +116,8 @@ Linf_female_BG <- val_female_BG[3] * val_female_BG[4]
 
 print(" Female ")
 print(val_female_BG)
-print("AIC:", AIC_female_BG)
-print("E[Linf] =", Linf_female_BG)
+print(paste("AIC:", AIC_female_BG))
+print(paste("E[Linf] =", Linf_female_BG))
 
 
 # Male
@@ -146,10 +146,9 @@ Linf_male_BG
 val_male_BG[1]
 
 #=== Male  ======
-print("Convergence:", res_male_BG$convergence == 0)
-print("Log-likelihood:", logL_male_BG)
-print("AIC:", AIC_male_BG)
-print("Estimated Linf (mean):", Linf_male_BG)
-print("Parameters: k =", val_male_BG[1], ", zeta =", val_male_BG[2], 
-    ", alpha =", val_male_BG[3], ", beta =", val_male_BG[4])
+print(paste("Convergence:", res_male_BG$convergence == 0))
+print(paste("AIC:", AIC_male_BG))
+print(paste("Estimated Linf (mean):", Linf_male_BG))
+print(paste("Parameters: k =", val_male_BG[1], ", zeta =", val_male_BG[2], 
+    ", alpha =", val_male_BG[3], ", beta =", val_male_BG[4]))
 
