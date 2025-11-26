@@ -89,7 +89,7 @@ LL_BG <- function(theta, dat, MinLinf, MaxLinf) {
   return(-LLtot)
 }
 
-dat_male <- dat[dat$SEX == 1, ]
+dat_female <- dat[dat$SEX == 1, ]
 MinLinf <- 180
 MaxLinf <- 200
 
