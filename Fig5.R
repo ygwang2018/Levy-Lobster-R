@@ -1,38 +1,40 @@
-library(lattice)
+library(ggplot2)
+library(dplyr)
 
 # 1. Convert date
 lobster$Date <- as.Date(lobster$Date, "%d/%m/%Y")
 
-# 2. Assign factor labels
-lobster$SEX <- factor(lobster$SEX, levels = c("1", "2"), labels = c("Female", "Male"))
+# 2. Factors
+lobster$SEX     <- factor(lobster$SEX, levels = c("1", "2"), labels = c("Female", "Male"))
 lobster$LOBSTER <- factor(lobster$LOBSTER)
 
-# 3. Assign colors to each lobster
+# 3. Assign colors per lobster (consistent within facet)
 n_lobsters <- length(levels(lobster$LOBSTER))
-lobster_colors <- rainbow(n_lobsters)
+lobster_colors <- scales::hue_pal()(n_lobsters)
+
 names(lobster_colors) <- levels(lobster$LOBSTER)
 
 # 4. Plot
-xyplot(
-  CL ~ Date | SEX,
-  data = lobster,
-  type = "s",
-  groups = LOBSTER,
-  layout = c(2, 1),
-  ylim = c(0, 170),
-  xlab = "Time (year)",
-  ylab = "Carapace Length (mm)",
-  strip = strip.custom(bg = "peachpuff", factor.levels = c("Female", "Male")),
-  scales = list(
-    x = list(format = "%Y", relation = "same"),
-    y = list(relation = "same")
-  ),
-  panel = function(x, y, groups, subscripts, ...) {
-    gp <- groups[subscripts]
-    for (lob_id in unique(gp)) {
-      idx <- which(gp == lob_id)
-      col <- lobster_colors[as.character(lob_id)]
-      panel.lines(x[idx], y[idx], type = "s", col = col)
-    }
-  }
-)
+p <- ggplot(lobster, aes(x = Date, y = CL, group = LOBSTER, color = LOBSTER)) +
+  geom_step(linewidth = 0.7, alpha = 0.90) +
+  facet_wrap(~SEX, nrow = 1, scales = "free_x",
+             strip.position = "top") +
+  scale_color_manual(values = lobster_colors) +
+  labs(
+    x = "Time (year)",
+    y = "Carapace Length (mm)"
+  ) +
+  scale_x_date(date_labels = "%Y") +
+  theme_bw(base_size = 14) +
+  theme(
+    strip.background = element_rect(fill = "peachpuff", color = NA),
+    strip.text = element_text(face = "bold", size = 15),
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey85")
+  )
+
+# 5. Display in RStudio
+print(p)
+
+p
