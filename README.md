@@ -25,32 +25,32 @@ Levy-Lobster-R/ ├── data/
 ## Installation & Usage
 Clone the repository and navigate into the folder:
 
-# ```bash
+## ```bash
 git clone https://github.com/ygwang2018/Levy-Lobster-R.git
 cd Levy-Lobster-R
 
-#Install required R packages:
+## Install required R packages:
 install.packages(c("tidyverse", "ggplot2", "dplyr"))
 
-#Run the main analysis:
+## Run the main analysis:
 source("scripts/main_analysis.R")
 
-#Generate plots:
+## Generate plots:
 source("scripts/plot_results.R")
 
-#Run example tests:
+## Run example tests:
 source("scripts/test_functions.R")
 
-#Results
+## Results
 The analysis produces statistical outputs and visualizations that demonstrate the application of Levy processes to ecological data.
 Example outputs can be found in the results/ directory.
 (Consider adding sample plots or screenshots here for clarity.)
 
-#Testing
+## Testing
 To validate functions and ensure reproducibility, run:
 source("scripts/test_functions.R")
 
-#Contributing
+## Contributing
 Contributions are welcome!
 1. Fork the repository
 2. Create a feature branch (git checkout -b feature-name)
@@ -59,10 +59,10 @@ Contributions are welcome!
 5. Open a Pull Request
 Please follow coding style guidelines and include tests where appropriate.
 
-#License
+## License
 This project is licensed under the MIT License. See the LICENSE file for details.
 
-#Acknowledgments
+## Acknowledgments
 • Inspiration from stochastic process modeling in ecology
 • R community for packages like tidyverse, ggplot2, and dplyr
 • Collaborators and contributors who supported the project
