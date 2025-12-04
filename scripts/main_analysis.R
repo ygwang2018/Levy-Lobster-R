@@ -3,7 +3,7 @@
 
 source("scripts/fig4.R")
 source("scripts/fig5.R")
-source("scripts/fig8_ci.R")
+source("scripts/fig8.R")
 source("scripts/fig10.R")
 
 # Tables
