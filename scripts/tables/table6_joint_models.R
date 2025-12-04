@@ -94,3 +94,25 @@ print( AIC_male)
 print(Linf_male)
 print(paste("k =", val_male[1], "zeta =", val_male[2], 
     "miu =", val_male[3],  "sigma =", val_male[4]))
+
+# Assemble results
+results_table <- data.frame(
+  Sex       = c("Female", "Male"),
+  k         = c(val_female[1],   val_male[1]),
+  zeta      = c(val_female[2],   val_male[2]),
+  miu       = c(val_female[3],   val_male[3]),
+  sigma     = c(val_female[4],   val_male[4]),
+  E_Linf    = c(Linf_female,     Linf_male),
+  LogLik    = c(logL_female,     logL_male),
+  NegLogLik = c(neg_logL_female, neg_logL_male),
+  AIC       = c(AIC_female,      AIC_male),
+  Converged = c(res_female$convergence == 0,
+                res_male$convergence == 0)
+)
+
+# Save CSV
+write.csv(
+  results_table,
+  file = "results/tables/table6_joint_models.csv",
+  row.names = FALSE
+)
