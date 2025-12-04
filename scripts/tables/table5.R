@@ -369,11 +369,6 @@ for (i in seq_len(nrow(results))) {
     )
 }
 
-## Save Monte Carlo Summary Results into CSV 
-
-# Create folders if needed
-if (!dir.exists("results")) dir.create("results")
-if (!dir.exists("results/tables")) dir.create("results/tables")
 
 # Save results dataframe as CSV
 write.csv(
