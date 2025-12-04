@@ -13,7 +13,7 @@ cols <- c("Female" = "#1f78b4",   # soft blue
           "Male"   = "#e31a1c")   # deep muted red
 
 # Plot: vertical stacked histograms with colour + elegance
-ggplot(df, aes(x = INT, fill = Sex)) +
+p<- ggplot(df, aes(x = INT, fill = Sex)) +
   geom_histogram(
     binwidth = 5,
     boundary = 0,
@@ -41,3 +41,5 @@ ggplot(df, aes(x = INT, fill = Sex)) +
     legend.position    = "none",     # clean: sex appears as facet labels
     panel.spacing      = unit(1.2, "lines")
   )
+# Save plot to results/figures
+ggsave("results/figures/fig2.png", plot = p, width = 6, height = 4, dpi = 300)
