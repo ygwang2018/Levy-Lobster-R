@@ -1,10 +1,10 @@
 # Main analysis orchestrator
 # This script sources all table and analysis scripts
 
-source("scripts/lobster_growth.R")
-source("scripts/mcmc_simulation.R")
-source("scripts/profile_likelihood_ci.R")
-source("scripts/obs_vs_predicted_ip.R")
+source("scripts/fig4.R")
+source("scripts/fig5.R")
+source("scripts/fig8_ci.R")
+source("scripts/fig10.R")
 
 # Tables
 source("scripts/tables/table2_bg_model.R")
