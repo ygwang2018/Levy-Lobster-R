@@ -9,7 +9,7 @@ renew1 %>%
   mutate(
     SEX = factor(SEX, levels = c(1, 2), labels = c("Female", "Male"))
   ) %>%
-  ggplot(aes(x = INC, fill = SEX)) +
+ p <- ggplot(aes(x = INC, fill = SEX)) +
   
   geom_histogram(
     bins = 30,
@@ -48,3 +48,5 @@ renew1 %>%
     panel.spacing = unit(1.3, "lines"),
     legend.position = "none"   # sex defined by facet → legend unnecessary
   )
+# Save plot to results/figures
+ggsave("results/figures/fig3.png", plot = p, width = 6, height = 4, dpi = 300)
