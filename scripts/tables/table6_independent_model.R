@@ -1,3 +1,4 @@
+data<-lobster
 independent_likelihood_kMI <- function(params, data) {
   
   Linf   <- params[1]
