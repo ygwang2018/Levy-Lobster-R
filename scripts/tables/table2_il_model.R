@@ -120,8 +120,8 @@ Linf_female_IL <- exp(val_female_IL[3] + val_female_IL[4]^2/2)
 
 #  FEMALE  
 print(val_female_IL)
-print("AIC:", AIC_female_IL)
-print("E[Linf]:", Linf_female_IL)
+print(paste("AIC:", AIC_female_IL))
+print(paste("E[Linf]:", Linf_female_IL))
 
 ############ Male
 dat<-lobster
@@ -143,13 +143,31 @@ neg_logL_male_IL <- res_male_IL$value
 AIC_male_IL <- 2 * (-neg_logL_male_IL) + 2 * length(val_male_IL)
 Linf_male_IL <- exp(val_male_IL[3] + (val_male_IL[4]^2) / 2)
 AIC_male_IL
-Linf_male_mean
+Linf_male_IL
 val_male_IL[1]
 val_male_IL
 
-print(" Male Results ")
-print("Convergence:", res_male_IL$convergence == 0)
-print("AIC:", AIC_male_IL)
-print("Estimated Linf:", Linf_male_IL)
-print("Parameters: k =", val_male_IL[1], ", lambda =", val_male_IL[2], 
-    ", miu =", val_male_IL[3], ", sigma =", val_male_IL[4])
+print(paste(" Male Results "))
+print(paste("Convergence:", res_male_IL$convergence == 0))
+print(paste("AIC:", AIC_male_IL))
+print(paste("Estimated Linf:", Linf_male_IL))
+print(paste("Parameters: k =", val_male_IL[1], ", lambda =", val_male_IL[2], 
+    ", miu =", val_male_IL[3], ", sigma =", val_male_IL[4]))
+
+# Assemble results
+table_il <- data.frame(
+  Sex        = c("Female", "Male"),
+  k          = c(val_female_IL[1], val_male_IL[1]),
+  lambda     = c(val_female_IL[2], val_male_IL[2]),
+  mu_log     = c(val_female_IL[3], val_male_IL[3]),
+  sigma_log  = c(val_female_IL[4], val_male_IL[4]),
+  E_Linf     = c(Linf_female_IL, Linf_male_IL),
+  AIC        = c(AIC_female_IL, AIC_male_IL),
+  Converged  = c(res_female_IL$convergence == 0, res_male_IL$convergence == 0)
+)
+
+# Optional rounding
+table_il[, c("k","lambda","mu_log","sigma_log","E_Linf","AIC")] <-
+  lapply(table_il[, c("k","lambda","mu_log","sigma_log","E_Linf","AIC")], function(x) round(x, 4))
+
+write.csv(table_il, "results/tables/table2_il_model.csv", row.names = FALSE)
