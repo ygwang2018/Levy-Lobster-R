@@ -43,3 +43,4 @@ p<- ggplot(df, aes(x = INT, fill = Sex)) +
   )
 # Save plot to results/figures
 ggsave("results/figures/fig2.png", plot = p, width = 6, height = 4, dpi = 300)
+test_function()
