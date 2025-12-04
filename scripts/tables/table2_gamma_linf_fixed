@@ -35,18 +35,18 @@ LL1 <- function(d) {
 }
 
 # Optimisation with simple bounds
-res <- optim(
-  par    = c(180, 0.5, 0.01),  # better starting values than 160, .1, .001
+res_f <- optim(
+  par    = c(180, 0.5, 0.01),
   fn     = LL1,
   method = "L-BFGS-B",
   lower  = c(160, 0.1, 0.01),
   upper  = c(300, 1, 0.5)
-)$par
+)
 
-Linf   <- res[1]
-lambda <- res[2]
-k      <- res[3]
-res
+val_f <- res_f$par
+negLL_f <- res_f$value
+p_f <- length(val_f)
+AIC_f <- 2*negLL_f + 2*p_f
 
 ######. MALE
 
@@ -87,15 +87,32 @@ LL1 <- function(d) {
 }
 
 # Optimisation with simple bounds
-res <- optim(
-  par    = c(180, 0.5, 0.01),  # better starting values than 160, .1, .001
+res_m <- optim(
+  par    = c(180, 0.5, 0.01),
   fn     = LL1,
   method = "L-BFGS-B",
   lower  = c(180, 0.1, 0.01),
   upper  = c(300, 1, 0.5)
-)$par
+)
 
-Linf   <- res[1]
-lambda <- res[2]
-k      <- res[3]
-res
+val_m <- res_m$par
+negLL_m <- res_m$value
+p_m <- length(val_m)
+AIC_m <- 2*negLL_m + 2*p_m
+
+
+# --- Combine into results table ---
+table2_results <- data.frame(
+  Sex    = c("Female", "Male"),
+  Linf   = c(val_f[1], val_m[1]),
+  lambda = c(val_f[2], val_m[2]),
+  k      = c(val_f[3], val_m[3]),
+  AIC    = c(AIC_f, AIC_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_gamma_linf_fixed.csv",
+  row.names = FALSE
+)
