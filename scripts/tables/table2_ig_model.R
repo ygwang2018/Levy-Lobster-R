@@ -33,20 +33,20 @@ LL_IG <- function(d) {
 }
 
 # Fit IG MI model
-res <- optim(
-  par    = c(180, 1, 0.1),    # starting values: (Linf, lambda, k)
+res_f <- optim(
+  par    = c(180, 1, 0.1),
   fn     = LL_IG,
   method = "L-BFGS-B",
   lower  = c(100, 0.01, 0.01),
   upper  = c(300, 10, 0.4),
-  control = list(maxit = 2000, trace = 1)
+  control = list(maxit = 2000)
 )
 
-# Extract parameter estimates
-Linf_IG   <- res$par[1]
-lambda_IG <- res$par[2]
-k_IG      <- res$par[3]
-res
+val_f <- res_f$par
+negLL_f <- res_f$value
+p_f <- length(val_f)
+AIC_f <- 2*negLL_f + 2*p_f
+
 
 ########. MALE
 
@@ -86,17 +86,39 @@ LL_IG <- function(d) {
 }
 
 # Fit IG MI model
-res <- optim(
-  par    = c(160, 1, 0.1),    # starting values: (Linf, lambda, k)
+res_m <- optim(
+  par    = c(160, 1, 0.1),
   fn     = LL_IG,
   method = "L-BFGS-B",
   lower  = c(160, 0.01, 0.01),
-  upper = c(180, 10, 1),
-  control = list(maxit = 2000, trace = 1)
+  upper  = c(180, 10, 1),
+  control = list(maxit = 2000)
 )
 
+val_m <- res_m$par
+negLL_m <- res_m$value
+p_m <- length(val_m)
+AIC_m <- 2*negLL_m + 2*p_m
+
 # Extract parameter estimates
-Linf_IG   <- res$par[1]
-lambda_IG <- res$par[2]
-k_IG      <- res$par[3]
-res
+Linf_IG   <- res_m$par[1]
+lambda_IG <- res_m$par[2]
+k_IG      <- res_m$par[3]
+res_m
+
+
+# --- Combine into results table ---
+table2_results <- data.frame(
+  Sex    = c("Female", "Male"),
+  Linf   = c(val_f[1], val_m[1]),
+  lambda = c(val_f[2], val_m[2]),
+  k      = c(val_f[3], val_m[3]),
+  AIC    = c(AIC_f, AIC_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_ig_model.csv",
+  row.names = FALSE
+)
