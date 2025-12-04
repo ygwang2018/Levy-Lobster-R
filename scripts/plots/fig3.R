@@ -12,11 +12,11 @@ test_function <- function() {
   cat("Running test_function for fig3...\n")
   
   # Check dataset exists
-  if (!exists("renew1")) stop("Dataset 'renew1' not found.")
+  if (!exists("lobster")) stop("Dataset 'lobster' not found.")
   if (!all(c("SEX","INC") %in% names(renew1))) stop("Missing required columns.")
   
   # Prepare data
-  df <- renew1 %>%
+  df <- lobster %>%
     mutate(SEX = factor(SEX, levels = c(1, 2), labels = c("Female", "Male")))
   
   # Build plot
