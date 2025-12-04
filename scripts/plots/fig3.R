@@ -13,7 +13,7 @@ test_function <- function() {
   
   # Check dataset exists
   if (!exists("lobster")) stop("Dataset 'lobster' not found.")
-  if (!all(c("SEX","INC") %in% names(renew1))) stop("Missing required columns.")
+  if (!all(c("SEX","INC") %in% names(lobster))) stop("Missing required columns.")
   
   # Prepare data
   df <- lobster %>%
