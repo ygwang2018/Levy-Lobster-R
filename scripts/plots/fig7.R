@@ -24,8 +24,11 @@ model_male <- glm(
   family = Gamma(link = "log")
 )
 
-# --- FEMALE ----
+# Open a PNG device
+png("results/figures/diagnostic_plots_female_male.png", 
+    width = 1200, height = 800, res = 150)
 
+# --- FEMALE ----
 par(mfrow = c(2, 2))
 plot(model_female, which = 1,
      main = "Residuals vs Fitted - Female")
@@ -36,8 +39,8 @@ plot(model_female, which = 3,
 plot(model_female, which = 4,
      main = "Residuals vs Leverage - Female")
 
-## Male (right 4 panels)
-par(mfrow=c(2,2))
+# --- MALE ----
+par(mfrow = c(2, 2))
 plot(model_male, which = 1,
      main = "Residuals vs Fitted - Male")
 plot(model_male, which = 2,
@@ -46,3 +49,6 @@ plot(model_male, which = 3,
      main = "Scale-Location - Male")
 plot(model_male, which = 4,
      main = "Residuals vs Leverage - Male")
+
+# Close the device (important!)
+dev.off()
