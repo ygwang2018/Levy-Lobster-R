@@ -47,3 +47,10 @@ male_table   <- fit_ip_model(filter(lobster, SEX=="Male"),   "Male")
 final_table <- rbind(female_table, male_table)
 
 final_table
+
+# --- Save final table to results/tables ---
+write.csv(
+  final_table,
+  "results/tables/table4.csv",
+  row.names = FALSE
+)
