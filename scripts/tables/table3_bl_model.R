@@ -1,9 +1,5 @@
 library(dplyr)
 
-############################################################
-#  GENERIC SAFE FUNCTIONS
-############################################################
-
 max_over_Linf_safe <- function(fun, lower, upper) {
   opt <- try(optimize(fun, interval = c(lower, upper), maximum = TRUE), silent = TRUE)
   if (inherits(opt, "try-error")) {
@@ -23,10 +19,7 @@ safe_integrate <- function(fun, lower, upper, n = 120) {
   sum(vals) * dx
 }
 
-############################################################
 #  FEMALE MODEL
-############################################################
-
 dat_f <- lobster %>% filter(SEX == 1)
 MinLinf_f <- max(dat_f$PL + dat_f$INC) + 0.1
 MaxLinf_f <- MinLinf_f + 80
@@ -138,10 +131,7 @@ se_Linf_f <- sqrt(var_Linf_f)
 CI_Linf_f <- Linf_f + c(-1.96, 1.96) * se_Linf_f
 
 
-############################################################
-#  MALE MODEL (same structure)
-############################################################
-
+#  MALE MODEL 
 dat_m <- lobster %>% filter(SEX == 2)
 MinLinf_m <- max(dat_m$PL + dat_m$INC) + 0.1
 MaxLinf_m <- MinLinf_m + 80
@@ -183,10 +173,7 @@ se_Linf_m <- sqrt(var_Linf_m)
 CI_Linf_m <- Linf_m + c(-1.96, 1.96) * se_Linf_m
 
 
-############################################################
 #  SUMMARY TABLE
-############################################################
-
 table_bl <- data.frame(
   Sex        = c("Female", "Male"),
   k          = c(par_f[1], par_m[1]),
