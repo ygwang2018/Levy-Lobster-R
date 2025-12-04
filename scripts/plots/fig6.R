@@ -31,3 +31,7 @@ p_aoas <- ggplot(ci_both,
   )
 
 print(p_aoas)
+
+# Save plot to results/figures
+ggsave("results/figures/fig6.png", plot = p_aoas, width = 6, height = 4, dpi = 300)
+
