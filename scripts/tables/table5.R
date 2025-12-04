@@ -311,7 +311,7 @@ results <- data.frame(
 )
 
 for (d in designs) {
-    cat("\n========== Monte Carlo Summary:", d, "==========\n")
+    # Monte Carlo Summary
     
     cat("Female L∞\n")
     res_f <- summarise_param(store[[d]]$f, Linf_true_f)
@@ -368,3 +368,17 @@ for (i in seq_len(nrow(results))) {
         "\n"
     )
 }
+
+## Save Monte Carlo Summary Results into CSV 
+
+# Create folders if needed
+if (!dir.exists("results")) dir.create("results")
+if (!dir.exists("results/tables")) dir.create("results/tables")
+
+# Save results dataframe as CSV
+write.csv(
+    results,
+    file = "results/tables/table5.csv",
+    row.names = FALSE
+)
+
