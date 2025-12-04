@@ -23,16 +23,20 @@ lobster_clean <- lobster %>%
         Predicted_INT >= 0, Predicted_INT <= 500
     )
 
-## 5. Plot
-ggplot(lobster_clean, aes(x = INT, y = Predicted_INT, colour = SEX)) +
-    geom_point(alpha = 0.7, size = 2.3) +
-    geom_abline(slope = 1, intercept = 0,
-                linetype = "dashed",
-                linewidth = 1,
-                colour = "grey40") +
-    facet_wrap(~SEX, nrow = 1, strip.position = "top") +
-    scale_colour_manual(values = c("Female" = "#F28E2B",
-                                   "Male"   = "#4E79A7")) +
-    scale_x_continuous(limits = c(0, 500)) +
-    scale_y_continuous(limits = c(0, 500)) +
-    theme_bw()
+# Assign plot to an object
+p <- ggplot(lobster_clean, aes(x = INT, y = Predicted_INT, colour = SEX)) +
+  geom_point(alpha = 0.7, size = 2.3) +
+  geom_abline(slope = 1, intercept = 0,
+              linetype = "dashed",
+              linewidth = 1,
+              colour = "grey40") +
+  facet_wrap(~SEX, nrow = 1, strip.position = "top") +
+  scale_colour_manual(values = c("Female" = "#F28E2B",
+                                 "Male"   = "#4E79A7")) +
+  scale_x_continuous(limits = c(0, 500)) +
+  scale_y_continuous(limits = c(0, 500)) +
+  theme_bw()
+
+# Save to results/figures
+ggsave("results/figures/fig8.png", plot = p,
+       width = 8, height = 5, dpi = 300)
