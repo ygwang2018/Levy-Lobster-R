@@ -120,6 +120,13 @@ sig<- fit$par[4]
 Linf<-exp(fit$par[3]+sig^2/2)
 Linf
 
+val_female <- fit$par
+negLL_f    <- fit$value
+p_f        <- length(val_female)
+AIC_f      <- 2*negLL_f + 2*p_f
+sigma_f    <- val_female[4]
+Linf_f     <- exp(val_female[3] + sigma_f^2/2)
+
 #————————————————————————————————————————————————————————
 
 #male
@@ -243,3 +250,28 @@ AIC_value
 sig<- fit$par[4]
 Linf<-exp(fit$par[3]+sig^2/2)
 Linf
+
+val_male   <- fit$par
+negLL_m    <- fit$value
+p_m        <- length(val_male)
+AIC_m      <- 2*negLL_m + 2*p_m
+sigma_m    <- val_male[4]
+Linf_m     <- exp(val_male[3] + sigma_m^2/2)
+
+# --- Combine into results table ---
+table2_results <- data.frame(
+  Sex   = c("Female", "Male"),
+  k     = c(val_female[1], val_male[1]),
+  zeta  = c(val_female[2], val_male[2]),
+  mu    = c(val_female[3], val_male[3]),
+  sigma = c(val_female[4], val_male[4]),
+  E_Linf = c(Linf_f, Linf_m),
+  AIC    = c(AIC_f, AIC_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_bl_model.csv",
+  row.names = FALSE
+)
