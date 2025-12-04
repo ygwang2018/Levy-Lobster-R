@@ -25,7 +25,7 @@ model_male <- glm(
 )
 
 # Open a PNG device
-png("results/figures/diagnostic_plots_female_male.png", 
+png("results/figures/fig7.png", 
     width = 1200, height = 800, res = 150)
 
 # --- FEMALE ----
