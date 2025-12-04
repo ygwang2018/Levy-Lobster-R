@@ -65,13 +65,14 @@ res_female_GL <- optim(init_theta, LL_GL, dat=dat_female,
                        upper=c(1, 100, 10, 10),
                        method="L-BFGS-B",
                        control=list(maxit=1000, trace=1))
-val_female_GL <- res_female_GL$par
-neg_logL_female_GL <- res_female_GL$value
-logL_female_GL <- -neg_logL_female_GL
-AIC_female_GL <- 2 * num_params + 2 * neg_logL_female_GL
-Linf_female_GL <- exp(val_female_GL[3] + (val_female_GL[4]^2) / 2)
-AIC_female_GL
-Linf_female_GL
+val_female <- res_female_GL$par
+negLL_f    <- res_female_GL$value
+AIC_f      <- 2 * num_params + 2 * negLL_f
+Linf_f     <- exp(val_female[3] + (val_female[4]^2) / 2)
+
+AIC_f                        
+Linf_f                  
+val_female
 val_female_GL[1]
 
 print("Convergence:", res_female_GL$convergence == 0)
@@ -89,14 +90,13 @@ res_male_GL <- optim(init_theta, LL_GL, dat=dat_male,
                      upper=c(1, 100, 10, 10),
                      method="L-BFGS-B",
                      control=list(maxit=1000, trace=1))
-val_male_GL <- res_male_GL$par
-neg_logL_male_GL <- res_male_GL$value
-logL_male_GL <- -neg_logL_male_GL
-AIC_male_GL <- 2 * num_params + 2 * neg_logL_male_GL
-Linf_male_GL <- exp(val_male_GL[3] + (val_male_GL[4]^2) / 2)
-AIC_male_GL
-Linf_male_GL
-val_male_GL[1]
+val_male   <- res_male_GL$par
+negLL_m    <- res_male_GL$value
+AIC_m      <- 2 * num_params + 2 * negLL_m
+Linf_m     <- exp(val_male[3] + (val_male[4]^2) / 2)
+AIC_m
+Linf_m
+val_male[1]
 
 print(" Male Results")
 print("Convergence:", res_male_GL$convergence == 0)
@@ -104,3 +104,23 @@ print("AIC:", AIC_male_GL)
 print("Estimated Linf:", Linf_male_GL)
 print("Parameters: k =", val_male_GL[1], ", alpha =", val_male_GL[2], 
     ", miu =", val_male_GL[3], ", sigma =", val_male_GL[4])
+                        
+
+# --- Combine into results table ---
+table2_results <- data.frame(
+  Sex    = c("Female", "Male"),
+  k      = c(val_female[1], val_male[1]),
+  alpha  = c(val_female[2], val_male[2]),
+  miu    = c(val_female[3], val_male[3]),
+  sigma  = c(val_female[4], val_male[4]),
+  E_Linf = c(Linf_f, Linf_m),
+  AIC    = c(AIC_f, AIC_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_gl_model.csv",
+  row.names = FALSE
+)
+
