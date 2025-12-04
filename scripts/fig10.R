@@ -114,10 +114,13 @@ plot_panel <- function(res, k, Linf_pop, title) {
   lines(t_grid, L_vbgf, lwd = 2, lty = 2)
 }
 
-## 2×2 figure: fixed vs random-effects L∞
+# Open a PNG device
+png("results/figures/growth_panel.png", width = 1200, height = 900, res = 150)
+
+# Set up 2×2 layout
 par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
 
-## 1. Females – Fixed L∞
+# 1. Females – Fixed L∞
 res_f_fixed <- simulate_growth(
   n        = n,
   ni_vals  = 4:15,
@@ -129,7 +132,7 @@ res_f_fixed <- simulate_growth(
 plot_panel(res_f_fixed, k_f, Linf_f_fixed,
            expression("Females – Fixed " * L[infinity]))
 
-## 2. Males – Fixed L∞
+# 2. Males – Fixed L∞
 res_m_fixed <- simulate_growth(
   n        = n,
   ni_vals  = 2:15,
@@ -141,7 +144,7 @@ res_m_fixed <- simulate_growth(
 plot_panel(res_m_fixed, k_m, Linf_m_fixed,
            expression("Males – Fixed " * L[infinity]))
 
-## 3. Females – Random-effects L∞
+# 3. Females – Random-effects L∞
 res_f_random <- simulate_growth(
   n        = n,
   ni_vals  = 4:15,
@@ -153,7 +156,7 @@ res_f_random <- simulate_growth(
 plot_panel(res_f_random, k_f, 183.27,
            expression("Females – Random-effects " * L[infinity]))
 
-## 4. Males – Random-effects L∞
+# 4. Males – Random-effects L∞
 res_m_random <- simulate_growth(
   n        = n,
   ni_vals  = 2:15,
@@ -164,3 +167,6 @@ res_m_random <- simulate_growth(
 )
 plot_panel(res_m_random, k_m, 184.34,
            expression("Males – Random-effects " * L[infinity]))
+
+# Close the device
+dev.off()
