@@ -245,3 +245,24 @@ CI_male_Linf <- c(
 names(CI_male_Linf) <- c("Lower 95%", "Upper 95%")
 
 CI_male_Linf
+
+# Collect results from female and male fits
+table_results <- data.frame(
+  Sex    = c("Female", "Male"),
+  k      = c(val_female_BG[1], val_male_BG[1]),
+  zeta   = c(val_female_BG[2], val_male_BG[2]),
+  alpha  = c(val_female_BG[3], val_male_BG[3]),
+  beta   = c(val_female_BG[4], val_male_BG[4]),
+  E_Linf = c(Linf_female_BG, Linf_male_BG),
+  AIC    = c(AIC_female_BG, AIC_male_BG),
+  L95    = c(CI_female_Linf[1], CI_male_Linf[1]),
+  U95    = c(CI_female_Linf[2], CI_male_Linf[2])
+)
+
+# Optional rounding for presentation
+table_results[] <- lapply(table_results, function(x) if(is.numeric(x)) round(x, 4) else x)
+
+# Save to results/tables
+write.csv(table_results,
+          "results/tables/table2_bg_model.csv",
+          row.names = FALSE)
