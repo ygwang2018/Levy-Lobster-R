@@ -15,10 +15,13 @@ This repository is designed for researchers, students, and data scientists inter
 - Test scripts to validate functions and workflows  
 
 ## Repository Structure
-Levy-Lobster-R/ ├── data/
-├── scripts/
-├── results/
-├── docs/
+Levy-Lobster-R/
+├── data/           # raw datasets (e.g., lobster.csv)
+├── scripts/        # all R scripts (analysis, plots, tables)
+│   ├── analysis/   # core modeling & simulation scripts
+│   ├── plots/      # scripts that generate figures
+│   └── tables/     # scripts that generate tables
+├── results/        # outputs (plots, tables, model results)
 └── README.md
 
 
