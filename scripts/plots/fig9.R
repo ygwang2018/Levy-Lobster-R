@@ -60,5 +60,11 @@ p4 <- ggplot(df, aes(x = index, y = abs_resid)) +
        y = "|Standardized residual|") +
   theme_minimal()
 
-# Arrange plots in a 2×2 panel
+# Open a PNG device
+png("results/figures/fig9.png", width = 1200, height = 900, res = 150)
+
+# Arrange plots in a 2×2 panel and send to file
 grid.arrange(p1, p2, p3, p4, ncol = 2)
+
+# Close the device (important!)
+dev.off()
