@@ -40,14 +40,14 @@ LL1 <- function(d)
   -BG
 }
 
-res <- optim(c(200, 0.1, 50), LL1)$par
-Linf <- res[1]
-k    <- res[2]
-zeta <- res[3]
+res_f <- optim(c(200, 0.1, 50), LL1)$par
+Linf_f <- res[1]
+k_f    <- res[2]
+zeta_f <- res[3]
 
 alpha <- (1 - exp(-k*T)) * (zeta-1)
 beta  <- exp(-k*T) * (zeta-1)
-res
+res_f
 
 #######.  MALE
 
@@ -93,11 +93,34 @@ LL1 <- function(d)
   -BG
 }
 
-res <- optim(c(200, 0.1, 50), LL1)$par
-Linf <- res[1]
-k    <- res[2]
-zeta <- res[3]
+res_m <- optim(c(200, 0.1, 50), LL1)$par
+Linf_m <- res[1]
+k_m    <- res[2]
+zeta_m <- res[3]
 
 alpha <- (1 - exp(-k*T)) * (zeta-1)
 beta  <- exp(-k*T) * (zeta-1)
-res
+res_m
+
+# --- Female estimates ---
+res_f <- optim(c(200, 0.1, 50), LL1)$par
+Linf_f <- res_f[1]; k_f <- res_f[2]; zeta_f <- res_f[3]
+
+# --- Male estimates ---
+res_m <- optim(c(200, 0.1, 50), LL1)$par
+Linf_m <- res_m[1]; k_m <- res_m[2]; zeta_m <- res_m[3]
+
+# --- Combine into a results data frame ---
+table2_results <- data.frame(
+  Sex   = c("Female", "Male"),
+  Linf  = c(Linf_f, Linf_m),
+  k     = c(k_f, k_m),
+  zeta  = c(zeta_f, zeta_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_bg_model.csv",
+  row.names = FALSE
+)
