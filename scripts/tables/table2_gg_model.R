@@ -107,13 +107,11 @@ res_female_GG <- optim(
   upper   = c(1.0, 100,  500, 20),
   control = list(maxit = 2000, trace = 1)
 )
-
-val_female_GG <- res_female_GG$par
-negLL_female  <- res_female_GG$value
-p_female      <- length(val_female_GG)
-
-AIC_female_GG <- 2*negLL_female + 2*p_female
-Linf_female_mean <- val_female_GG[3] / val_female_GG[4]   # Gamma mean
+val_female <- res_female_GG$par
+negLL_f    <- res_female_GG$value
+p_f        <- length(val_female)
+AIC_f      <- 2*negLL_f + 2*p_f
+Linf_f     <- val_female[3] / val_female[4]   # Gamma mean
 
 #======== FEMALE 
 print(val_female_GG)
@@ -145,14 +143,33 @@ res_male_GG <- optim(
   control = list(maxit = 2000, trace = 1)
 )
 
-val_male_GG <- res_male_GG$par
-negLL_male  <- res_male_GG$value
-p_male      <- length(val_male_GG)
-
-AIC_male_GG <- 2*negLL_male + 2*p_male
-Linf_male_mean <- val_male_GG[3] / val_male_GG[4]   # Gamma mean
+val_male   <- res_male_GG$par
+negLL_m    <- res_male_GG$value
+p_m        <- length(val_male)
+AIC_m      <- 2*negLL_m + 2*p_m
+Linf_m     <- val_male[3] / val_male[4]       # Gamma mean
 
 ###== MALE 
 print(val_male_GG)
 print("AIC:", AIC_male_GG)
 print("E[Linf]:", Linf_male_mean)
+
+
+
+# --- Combine into results table ---
+table2_results <- data.frame(
+  Sex    = c("Female", "Male"),
+  k      = c(val_female[1], val_male[1]),
+  alpha  = c(val_female[2], val_male[2]),
+  a_L    = c(val_female[3], val_male[3]),
+  b_L    = c(val_female[4], val_male[4]),
+  E_Linf = c(Linf_f, Linf_m),
+  AIC    = c(AIC_f, AIC_m)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_gg_model.csv",
+  row.names = FALSE
+)
