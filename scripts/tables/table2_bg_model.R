@@ -152,3 +152,32 @@ print(paste("Estimated Linf (mean):", Linf_male_BG))
 print(paste("Parameters: k =", val_male_BG[1], ", zeta =", val_male_BG[2], 
     ", alpha =", val_male_BG[3], ", beta =", val_male_BG[4]))
 
+# --- Female results ---
+val_female_BG <- res_female_BG$par
+AIC_female_BG <- 2 * res_female_BG$value + 2 * length(val_female_BG)
+Linf_female_BG <- val_female_BG[3] * val_female_BG[4]
+
+# --- Male results ---
+val_male_BG <- res_male_BG$par
+logLik_male <- -res_male_BG$value
+AIC_male_BG <- 2 * length(val_male_BG) - 2 * logLik_male
+Linf_male_BG <- val_male_BG[3] * val_male_BG[4]
+
+# --- Combine into a results data frame ---
+table2_results <- data.frame(
+  Sex   = c("Female", "Male"),
+  k     = c(val_female_BG[1], val_male_BG[1]),
+  zeta  = c(val_female_BG[2], val_male_BG[2]),
+  alpha = c(val_female_BG[3], val_male_BG[3]),
+  beta  = c(val_female_BG[4], val_male_BG[4]),
+  E_Linf = c(Linf_female_BG, Linf_male_BG),
+  AIC    = c(AIC_female_BG, AIC_male_BG)
+)
+
+# --- Save to results/tables ---
+write.csv(
+  table2_results,
+  "results/tables/table2_bg_model.csv",
+  row.names = FALSE
+)
+
