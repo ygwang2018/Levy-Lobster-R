@@ -1,7 +1,5 @@
 test_fig10 <- function() {
-  cat("Running test for growth_panel...\n")
   
-  # Parameters (Table 6 + SD = 12 mm)
   set.seed(123)
   
   n      <- 100
@@ -32,11 +30,9 @@ test_fig10 <- function() {
   b1_m   <- -1.984
   b2_m   <- 0.01
   
-  # Open a PNG device
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
   png("results/figures/growth_panel.png", width = 1200, height = 900, res = 150)
   
-  # Set up 2×2 layout
   par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
   
   # 1. Females – Fixed L∞
@@ -87,7 +83,6 @@ test_fig10 <- function() {
   plot_panel(res_m_random, k_m, 184.34,
              expression("Males – Random-effects " * L[infinity]))
   
-  # Close the device
   dev.off()
   
   cat("growth_panel.png saved to results/figures.\n")
