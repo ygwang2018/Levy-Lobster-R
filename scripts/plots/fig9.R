@@ -3,7 +3,6 @@ library(gridExtra)
 
 ## test_fig9: smoke test for MI residual diagnostics
 test_fig9 <- function() {
-  cat("Running test for fig9...\n")
   
   # Read data
   df <- lobster
