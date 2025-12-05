@@ -2,7 +2,7 @@ library(splines)
 library(dplyr)
 library(ggplot2)
 
-test_fig8 <- function() {
+test_fig7 <- function() {
   cat("Running test for fig8...\n")
   
   # Ensure SEX is labelled
