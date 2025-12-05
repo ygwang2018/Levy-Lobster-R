@@ -80,10 +80,14 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
   ids <- unique(df$id)
   for (id in ids) {
     d <- df[df$id == id, ]
-    lines(d$time, d$L, col = rgb(0,0,0,0.25))
+    ## STEPWISE trajectories: type = "s"
+    lines(d$time, d$L,
+          type = "s",                 # <- this makes it stepwise
+          col  = rgb(0, 0, 0, 0.25),
+          lwd  = 1)
   }
 
-  # VB curve
+  # Smooth VB curve (keep as before)
   t_grid <- seq(0, 10, length.out = 300)
   Lhat <- Linf_mean * (1 - exp(-k * t_grid))
   lines(t_grid, Lhat, col = "cyan", lwd = 2)
