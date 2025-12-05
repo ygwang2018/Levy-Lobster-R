@@ -8,7 +8,7 @@ sex_cols <- c("Female" = "#3AAFA9",   # soft teal
 ## ---------------------------------------------------------
 ## test_function: smoke test for fig3 plotting script
 ## ---------------------------------------------------------
-test_function <- function() {
+test_fig3 <- function() {
   cat("Running test_function for fig3...\n")
   
   # Check dataset exists
