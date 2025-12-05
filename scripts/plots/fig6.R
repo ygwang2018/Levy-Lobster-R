@@ -5,7 +5,26 @@ test_fig6 <- function(save_csv = TRUE) {
   ## 1. Validate dataset
   required_cols <- c("sex", "estimate", "lower", "upper",
                      "parameter_label", "Model")
-  
+  ci_female <- data.frame(
+  sex = "Female",
+  estimate = c(k_hat_f, Linf_hat_f),
+  lower = c(k_low_f, Linf_low_f),
+  upper = c(k_up_f, Linf_up_f),
+  parameter_label = c("k", "L[infty]"),
+  Model = model_name
+)
+
+ci_male <- data.frame(
+  sex = "Male",
+  estimate = c(k_hat_m, Linf_hat_m),
+  lower = c(k_low_m, Linf_low_m),
+  upper = c(k_up_m, Linf_up_m),
+  parameter_label = c("k", "L[infty]"),
+  Model = model_name
+)
+
+ci_both <- rbind(ci_female, ci_male)
+
   ## Optional: clean ordering for consistent facet layout
   ci_both$sex <- factor(ci_both$sex, levels = c("Female", "Male"))
   
