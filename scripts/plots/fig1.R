@@ -70,4 +70,4 @@ p<- ggplot(df, aes(x = INT, fill = Sex)) +
     panel.spacing      = unit(1.2, "lines")
   )
 # Save plot to results/figures
-ggsave("results/figures/fig2.png", plot = p, width = 6, height = 4, dpi = 300)
+ggsave("results/figures/fig1.png", plot = p, width = 6, height = 4, dpi = 300)
