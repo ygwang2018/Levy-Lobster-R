@@ -42,7 +42,7 @@ test_fig3 <- function() {
   
   # Save plot
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
-  ggsave("results/figures/fig3.png", plot = p, width = 6, height = 4, dpi = 300)
+  ggsave("results/figures/fig2.png", plot = p, width = 6, height = 4, dpi = 300)
   
   invisible(p)
 }
