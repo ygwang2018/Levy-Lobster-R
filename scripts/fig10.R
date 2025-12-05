@@ -1,8 +1,6 @@
 library(dplyr)
 
-# -----------------------------------------------------------
 # 1. Utility: convert mean & sd to lognormal parameters
-# -----------------------------------------------------------
 ln_params <- function(mean, sd) {
   var <- sd^2
   meanlog <- log(mean^2 / sqrt(mean^2 + var))
@@ -10,9 +8,7 @@ ln_params <- function(mean, sd) {
   c(meanlog = meanlog, sdlog = sdlog)
 }
 
-# -----------------------------------------------------------
 # 2. Simulate growth under BL + Gamma-IP models
-# -----------------------------------------------------------
 simulate_growth <- function(
     n,                     # number of individuals
     ni_vals,               # number of moults per individual
@@ -67,35 +63,53 @@ simulate_growth <- function(
   bind_rows(out)
 }
 
-# -----------------------------------------------------------
 # 3. Plotting panel
-# -----------------------------------------------------------
 plot_panel <- function(df, k, Linf_mean, title_expr) {
-
-  plot(df$time, df$L, type = "n",
-       xlab = "Years", ylab = "Length (mm)",
+  
+  # ---------------------------------------------------------
+  # 1. Prepare plotting region
+  # ---------------------------------------------------------
+  plot(df$Ti/365, df$L,
+       type = "n",
+       xlab = "Years", 
+       ylab = "Length (mm)",
        main = title_expr,
-       xlim = c(0, 10), ylim = c(0, 200))
-
-  ids <- unique(df$id)
+       ylim = c(0, max(df$L)*1.05))
+  
+  # ---------------------------------------------------------
+  # 2. Draw stepwise simulated growth trajectories
+  # ---------------------------------------------------------
+  ids <- unique(df$i)
   for (id in ids) {
-    d <- df[df$id == id, ]
-    ## STEPWISE trajectories: type = "s"
-    lines(d$time, d$L,
-          type = "s",                 # <- this makes it stepwise
-          col  = rgb(0, 0, 0, 0.25),
-          lwd  = 1)
+    d <- df[df$i == id, ]
+    # Stepwise (left-constant) line segments
+    segments(x0 = d$Ti[-nrow(d)]/365,
+             y0 = d$L[-nrow(d)],
+             x1 = d$Ti[-1]/365,
+             y1 = d$L[-nrow(d)],
+             col = rgb(0, 0, 0, 0.25))
   }
-
-  # Smooth VB curve (keep as before)
-  t_grid <- seq(0, 10, length.out = 300)
-  Lhat <- Linf_mean * (1 - exp(-k * t_grid))
-  lines(t_grid, Lhat, col = "cyan", lwd = 2)
+  
+  # 3. Compute simulated mean trajectory (cyan curve)
+  t_grid <- seq(0, 10, length.out = 500)
+  mean_curve <- sapply(t_grid, function(t) {
+    mean(sapply(ids, function(id) {
+      d <- df[df$i == id, ]
+      idx <- max(which(d$Ti/365 <= t))
+      if (length(idx) == 0) return(NA)
+      return(d$L[idx])
+    }), na.rm = TRUE)
+  })
+  
+  lines(t_grid, mean_curve, col = "cyan", lwd = 2)
+  
+  # 4. Von Bertalanffy fitted curve (black dashed)
+  #     L(t) = L∞ (1 - exp(-k t))
+  vb_curve <- Linf_mean * (1 - exp(-k * t_grid))
+  lines(t_grid, vb_curve, col = "black", lwd = 2, lty = 2)
 }
 
-# -----------------------------------------------------------
 # 4. Main figure function
-# -----------------------------------------------------------
 test_fig10 <- function() {
 
   set.seed(123)
