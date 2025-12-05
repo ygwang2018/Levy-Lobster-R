@@ -13,7 +13,7 @@ cols <- c("Female" = "#1f78b4",   # soft blue
           "Male"   = "#e31a1c")   # deep muted red
 
 
-test_function <- function() {
+test_fig <- function() {
   cat("Running test_function for fig2...\n")
   
   if (!exists("lobster")) stop("Dataset 'lobster' not found.")
