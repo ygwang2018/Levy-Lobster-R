@@ -1,39 +1,165 @@
+###############################################################################
+# 1. Lognormal parameter converter for Linf random-effects
+###############################################################################
+ln_params <- function(mean, sd) {
+  var <- sd^2
+  meanlog <- log(mean^2 / sqrt(var + mean^2))
+  sdlog   <- sqrt(log(1 + var / mean^2))
+  c(meanlog = meanlog, sdlog = sdlog)
+}
+
+
+###############################################################################
+# 2. Growth Simulator for von Bertalanffy + MI (Beta) + IP (Gamma GLM)
+###############################################################################
+simulate_growth_A <- function(n, k, zeta, Linf_type, Linf_par, glm_int) {
+
+  out <- vector("list", n)
+
+  for (i in 1:n) {
+
+    # Choose Linf
+    if (Linf_type == "fixed") {
+      Linf <- Linf_par
+    } else if (Linf_type == "lognormal") {
+      Linf <- rlnorm(1,
+                     meanlog = Linf_par["meanlog"],
+                     sdlog   = Linf_par["sdlog"])
+    } else {
+      stop("Unknown Linf_type.")
+    }
+
+    # Initial length
+    L <- runif(1, 15, 35)   # realistic PL start
+    t <- 0
+
+    tmp <- data.frame(id = i, t = t, L = L, Linf = Linf)
+
+    # Simulate until approaching Linf
+    repeat {
+
+      # Predict intermoult period
+      T <- as.numeric(
+        predict(glm_int,
+                newdata = data.frame(PL = L, NINT = 1),
+                type = "response")
+      )
+
+      # Avoid unrealistic predictions
+      if (!is.finite(T) || T <= 0) T <- 1
+
+      # Beta MI model
+      a <- (1 - exp(-k * T)) * (zeta - 1)
+      b <- exp(-k * T) * (zeta - 1)
+
+      if (a <= 0 || b <= 0) break
+
+      x <- rbeta(1, a, b)
+      MI <- x * (Linf - L)
+
+      L_new <- L + MI
+      t <- t + T
+
+      tmp <- rbind(tmp,
+                   data.frame(id = i, t = t, L = L_new, Linf = Linf))
+
+      L <- L_new
+
+      # Stopping rule
+      if ((Linf - L) < 0.5) break
+      if (t > 50) break
+    }
+
+    out[[i]] <- tmp
+  }
+
+  do.call(rbind, out)
+}
+
+
+###############################################################################
+# 3. Plot Panel Function
+###############################################################################
+plot_panel_A <- function(sim, k, Linf, mainlab) {
+
+  # Deterministic VB curve
+  t_seq <- seq(0, max(sim$t), length.out = 200)
+  L0 <- sim$L[1]
+  L_det <- Linf - (Linf - L0) * exp(-k * t_seq)
+
+  plot(sim$t, sim$L, type = "n",
+       xlab = "Time",
+       ylab = "Length",
+       main = mainlab, cex.main = 1.1)
+
+  # Plot simulated paths
+  ids <- unique(sim$id)
+  for (id in ids) {
+    dat <- sim[sim$id == id, ]
+    lines(dat$t, dat$L, col = adjustcolor("steelblue4", 0.35))
+  }
+
+  # Add deterministic VB
+  lines(t_seq, L_det, col = "black", lwd = 2, lty = 2)
+
+  # Add Linf horizontal line
+  abline(h = Linf, col = "grey50", lty = 3)
+}
+
+
+###############################################################################
+# 4. Full Figure 10 Function (Self-contained)
+###############################################################################
 test_fig10 <- function() {
-  
-  # Load or use existing Gamma GLM from your INT model:
-  # glm_int must be Gamma with log link
-  glm_int_f <- glm(INT ~ PL + NINT, data=lobster[lobster$SEX=="Female",], family=Gamma(link="log"))
-  glm_int_m <- glm(INT ~ PL + NINT, data=lobster[lobster$SEX=="Male",], family=Gamma(link="log"))
-  
+
+  if (!"lobster" %in% ls()) stop("Lobster dataset missing.")
+
+  # SEX coding: 1 = Female, 2 = Male
+  dat_f <- subset(lobster, SEX == 1)
+  dat_m <- subset(lobster, SEX == 2)
+
+  if (nrow(dat_f) == 0) stop("No female data (SEX=1).")
+  if (nrow(dat_m) == 0) stop("No male data (SEX=2).")
+
+  # Fit IP model (Gamma GLM with log link)
+  glm_int_f <- glm(INT ~ PL + NINT,
+                   data = dat_f, family = Gamma(link="log"))
+  glm_int_m <- glm(INT ~ PL + NINT,
+                   data = dat_m, family = Gamma(link="log"))
+
   # Parameters from Table 6
   k_f <- 0.283;  zeta_f <- 75.055;  Linf_f <- 183.87
   k_m <- 0.2473; zeta_m <- 59.947; Linf_m <- 228.04
-  
-  n <- 100
-  
-  # Simulate
-  sim_f <- simulate_growth_A(n, k_f, zeta_f, "fixed", Linf_f, glm_int_f)
-  sim_f$id <- rep(1:n, table(sim_f$t==0)[1])
-  
-  sim_m <- simulate_growth_A(n, k_m, zeta_m, "fixed", Linf_m, glm_int_m)
-  sim_m$id <- rep(1:n, table(sim_m$t==0)[1])
-  
-  # Random-effects versions require ln_params(mean, sd)
+
+  n <- 100   # number of simulated lobsters
+
+  # FIXED EFFECTS SIMULATION
+  sim_f  <- simulate_growth_A(n, k_f, zeta_f, "fixed", Linf_f, glm_int_f)
+  sim_m  <- simulate_growth_A(n, k_m, zeta_m, "fixed", Linf_m, glm_int_m)
+
+  # RANDOM EFFECTS PARAMETERS
   ln_f <- ln_params(183.27, 12)
   ln_m <- ln_params(184.34, 12)
-  
+
   sim_fr <- simulate_growth_A(n, k_f, zeta_f, "lognormal", ln_f, glm_int_f)
-  sim_fr$id <- rep(1:n, table(sim_fr$t==0)[1])
-  
   sim_mr <- simulate_growth_A(n, k_m, zeta_m, "lognormal", ln_m, glm_int_m)
-  sim_mr$id <- rep(1:n, table(sim_mr$t==0)[1])
-  
-  
+
+  # PLOT PANELS
   par(mfrow=c(2,2), mar=c(4,4,3,1))
-  plot_panel_A(sim_f,  k_f, Linf_f, expression("Females – Fixed " * L[infinity]))
-  plot_panel_A(sim_m,  k_m, Linf_m, expression("Males – Fixed "   * L[infinity]))
-  plot_panel_A(sim_fr, k_f, 183.27, expression("Females – Random-effects " * L[infinity]))
-  plot_panel_A(sim_mr, k_m, 184.34, expression("Males – Random-effects "   * L[infinity]))
-  
-  dev.off()
-  }
+
+  plot_panel_A(sim_f,  k_f, Linf_f,
+               expression("Females – Fixed " * L[infinity]))
+
+  plot_panel_A(sim_m,  k_m, Linf_m,
+               expression("Males – Fixed " * L[infinity]))
+
+  plot_panel_A(sim_fr, k_f, 183.27,
+               expression("Females – Random-effects " * L[infinity]))
+
+  plot_panel_A(sim_mr, k_m, 184.34,
+               expression("Males – Random-effects " * L[infinity]))
+}
+
+###############################################################################
+# End of Full Code
+###############################################################################
