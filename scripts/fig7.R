@@ -2,9 +2,6 @@ library(splines)
 library(dplyr)
 library(ggplot2)
 
-## ---------------------------------------------------------
-## test_fig8: smoke test for INT vs Predicted_INT plot
-## ---------------------------------------------------------
 test_fig8 <- function() {
   cat("Running test for fig8...\n")
   
@@ -46,7 +43,7 @@ test_fig8 <- function() {
   
   # Save plot
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
-  ggsave("results/figures/fig8.png", plot = p, width = 8, height = 5, dpi = 300)
+  ggsave("results/figures/fig7.png", plot = p, width = 8, height = 5, dpi = 300)
   
   invisible(p)
 }
