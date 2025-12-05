@@ -1,3 +1,65 @@
+ln_params <- function(mean, sd) {
+  var <- sd^2
+  meanlog <- log(mean^2 / sqrt(var + mean^2))
+  sdlog   <- sqrt(log(1 + var / mean^2))
+  return(c(meanlog = meanlog, sdlog = sdlog))
+}
+
+simulate_growth <- function(
+    n, ni_vals, T0_range,
+    Linf_type = "fixed", Linf_par,
+    k, zeta, gam, b1, b2
+) {
+  res <- vector("list", n)
+  
+  for (i in 1:n) {
+    ni <- sample(ni_vals, 1)
+    T0 <- runif(1, T0_range[1], T0_range[2])
+    Ti <- cumsum(rexp(ni, rate = 1/365))
+    
+    # Generate Linf
+    Linf <- if (Linf_type == "fixed") {
+      Linf_par
+    } else if (Linf_type == "lognormal") {
+      rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
+    }
+    
+    # Expected increments
+    E_MI <- (Linf - b2) * (1 - exp(-k * (Ti - T0)))
+    
+    # Gamma variability
+    shape <- zeta
+    rate  <- zeta / E_MI
+    MI    <- rgamma(ni, shape = shape, rate = rate)
+    
+    L <- b2 + cumsum(MI)
+    
+    res[[i]] <- data.frame(
+      i = i, ni = ni, Ti = Ti, L = L, Linf = Linf
+    )
+  }
+  
+  return(do.call(rbind, res))
+}
+
+plot_panel <- function(df, k, Linf_mean, title_expr) {
+  plot(df$Ti/365, df$L,
+       type = "n",
+       xlab = "Years", ylab = "Carapace Length (mm)",
+       main = title_expr)
+  
+  ids <- unique(df$i)
+  for (id in ids) {
+    d <- df[df$i == id, ]
+    lines(d$Ti/365, d$L, col = rgb(0,0,0,0.25))
+  }
+  
+  # Expected VB curve
+  t_grid <- seq(0, 10, length.out = 300)
+  Lhat <- Linf_mean * (1 - exp(-k * t_grid))
+  lines(t_grid, Lhat, col = "red", lwd = 2)
+}
+
 test_fig10 <- function() {
   
   set.seed(123)
