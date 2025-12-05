@@ -50,8 +50,6 @@ ci_both$parameter_label <- factor(ci_both$parameter_label, levels = c("k", "L[in
 
 test_fig6 <- function(save_csv = TRUE) {
 
-  if (!exists("ci_both")) stop("'ci_both' not found.")
-
   # Build plot
   p_aoas <- ggplot(ci_both,
                    aes(x = sex, y = estimate,
