@@ -38,5 +38,5 @@ p <- ggplot(lobster, aes(x = Date, y = CL, group = LOBSTER, color = LOBSTER)) +
 print(p)
 
 # Save to results/figures
-ggsave("results/figures/fig5.png", plot = p,
+ggsave("results/figures/fig4.png", plot = p,
        width = 8, height = 5, dpi = 300)
