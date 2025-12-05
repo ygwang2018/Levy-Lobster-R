@@ -88,7 +88,7 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
 
 # 4. Main figure function
 
-test_fig10 <- function() {
+test_fig9 <- function() {
 
   set.seed(123)
 
