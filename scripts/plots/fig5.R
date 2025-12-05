@@ -92,7 +92,7 @@ test_fig5 <- function(save_csv = TRUE) {
   # Save CI dataset
   if (save_csv) {
     dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
-    write.csv(ci_both, "results/tables/fig6.csv", row.names = FALSE)
+    write.csv(ci_both, "results/tables/fig5.csv", row.names = FALSE)
   }
 
   p_aoas
