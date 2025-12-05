@@ -1,14 +1,12 @@
 library(ggplot2)
 library(gridExtra)
 
-## ---------------------------------------------------------
 ## test_fig9: smoke test for MI residual diagnostics
-## ---------------------------------------------------------
 test_fig9 <- function() {
   cat("Running test for fig9...\n")
   
   # Read data
-  df <- renew1
+  df <- lobster
   
   # Compute proportion of growth relative to next size
   epsilon <- 1e-5
