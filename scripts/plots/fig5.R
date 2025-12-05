@@ -48,7 +48,7 @@ ci_both$sex <- factor(ci_both$sex, levels = c("Female", "Male"))
 ci_both$parameter_label <- factor(ci_both$parameter_label, levels = c("k", "L[infty]"))
 
 
-test_fig6 <- function(save_csv = TRUE) {
+test_fig5 <- function(save_csv = TRUE) {
 
   # Build plot
   p_aoas <- ggplot(ci_both,
@@ -99,4 +99,4 @@ test_fig6 <- function(save_csv = TRUE) {
 }
 
 
-test_fig6()
+test_fig5()
