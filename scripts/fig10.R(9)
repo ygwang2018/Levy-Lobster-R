@@ -61,9 +61,7 @@ simulate_growth <- function(
   bind_rows(out)
 }
 
-# -----------------------------------------------------------
 # 3. Plotting panel
-# -----------------------------------------------------------
 plot_panel <- function(df, k, Linf_mean, title_expr) {
 
   plot(df$time, df$L, type = "n",
@@ -87,7 +85,7 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
   lines(t_grid, Lhat, col = "cyan", lwd = 2)
 }
 
-# -----------------------------------------------------------
+
 # 4. Main figure function
 
 test_fig10 <- function() {
@@ -166,7 +164,7 @@ test_fig10 <- function() {
 
   dev.off()
 
-  cat("Saved: results/figures/growth_panel.png\n")
+  cat("Saved: results/figures/fig10.png\n")
 
   return(invisible())
 }
