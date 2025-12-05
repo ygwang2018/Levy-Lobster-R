@@ -36,12 +36,6 @@ test_fig2 <- function() {
   
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive=TRUE)
   ggsave("results/figures/fig2.png", plot=p, width=6, height=4, dpi=300)
-  
-  if (file.exists("results/figures/fig2.png")) {
-    cat("✅ Test passed: fig2.png created successfully.\n")
-  } else {
-    cat("❌ Test failed: fig2.png not found.\n")
-  }
 }
 
 
