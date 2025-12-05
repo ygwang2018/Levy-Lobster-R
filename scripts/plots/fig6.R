@@ -1,8 +1,7 @@
 library(dplyr)
 library(splines)
 
-test_fig7 <- function() {
-  cat("Running test_fig7 (Female + Male)...\n")
+test_fig6 <- function() {
   
   # Ensure SEX labels
   if (is.numeric(lobster$SEX)) {
@@ -14,9 +13,6 @@ test_fig7 <- function() {
   lobster_female <- filter(lobster, SEX == "Female")
   lobster_male   <- filter(lobster, SEX == "Male")
   
-  if (nrow(lobster_female) == 0 | nrow(lobster_male) == 0) {
-    stop("ERROR: Missing Female or Male rows.")
-  }
   
   # Fit Gamma GLMs
   model_female <- glm(INT ~ ns(PL, df = 3) + ns(NINT, df = 3),
@@ -27,7 +23,7 @@ test_fig7 <- function() {
   
   
   # OPEN ONE PNG FOR ALL 8 PANELS
-  png("results/figures/fig7.png", width = 1800, height = 2400, res = 150)
+  png("results/figures/fig6.png", width = 1800, height = 2400, res = 150)
   
   # 4 rows × 2 columns = 8 diagnostic plots (Female + Male)
   par(mfrow = c(4, 2))
