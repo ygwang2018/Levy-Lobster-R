@@ -1,5 +1,4 @@
 test_fig10 <- function() {
-  cat("Running Fig. 9 simulation (Option A)...\n")
   
   # Load or use existing Gamma GLM from your INT model:
   # glm_int must be Gamma with log link
