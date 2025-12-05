@@ -26,7 +26,7 @@ test_table2_bg <- function() {
     exp(val - Mi)
   }
   
-  safe_integrate <- function(fun, lower, upper, n=100) {
+  safe_integrate <- function(fun, lower, upper, n=20) {
     xs <- seq(lower, upper, length.out=n)
     vals <- sapply(xs, fun)
     dx <- (upper - lower)/(n-1)
