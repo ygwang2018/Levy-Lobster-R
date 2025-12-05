@@ -1,9 +1,6 @@
 library(ggplot2)
 library(dplyr)
 
-## ---------------------------------------------------------
-## test_fig4: smoke test for lobster growth trajectories
-## ---------------------------------------------------------
 test_fig4 <- function() {
   cat("Running test for fig4...\n")
   
@@ -40,10 +37,7 @@ test_fig4 <- function() {
     )
   
   # 5. Save to results/figures
-  if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
   ggsave("results/figures/fig4.png", plot = p, width = 8, height = 5, dpi = 300)
-  
-  cat("fig4.png saved to results/figures.\n")
-  
+    
   invisible(p)
 }
