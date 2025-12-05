@@ -1,95 +1,104 @@
 library(ggplot2)
+library(dplyr)
+
+
+ci_both <- bind_rows(
+
+  # -------------------- LOGNORMAL MODEL --------------------
+  data.frame(
+    Model = "Lognormal~L[infty]",
+    parameter_label = "k",
+    sex       = c("Female", "Male"),
+    estimate  = c(0.277, 0.304),
+    lower     = c(0.218, 0.254),
+    upper     = c(0.335, 0.353)
+  ),
+
+  data.frame(
+    Model = "Lognormal~L[infty]",
+    parameter_label = "L[infty]",
+    sex       = c("Female", "Male"),
+    estimate  = c(185.32, 201.48),
+    lower     = c(163.75, 182.02),
+    upper     = c(206.88, 220.94)
+  ),
+
+  # -------------------- GAMMA MODEL ------------------------
+  data.frame(
+    Model = "Gamma~L[infty]",
+    parameter_label = "k",
+    sex       = c("Female", "Male"),
+    estimate  = c(0.267, 0.337),
+    lower     = c(0.246, 0.313),
+    upper     = c(0.288, 0.360)
+  ),
+
+  data.frame(
+    Model = "Gamma~L[infty]",
+    parameter_label = "L[infty]",
+    sex       = c("Female", "Male"),
+    estimate  = c(189.80, 190.11),
+    lower     = c(186.39, 185.84),
+    upper     = c(193.19, 195.28)
+  )
+)
+
+# Ordering of factors
+ci_both$sex <- factor(ci_both$sex, levels = c("Female", "Male"))
+ci_both$parameter_label <- factor(ci_both$parameter_label, levels = c("k", "L[infty]"))
+
 
 test_fig6 <- function(save_csv = TRUE) {
-  
-  ## 1. Validate dataset
-  required_cols <- c("sex", "estimate", "lower", "upper",
-                     "parameter_label", "Model")
-  ci_female <- data.frame(
-  sex = "Female",
-  estimate = c(k_hat_f, Linf_hat_f),
-  lower = c(k_low_f, Linf_low_f),
-  upper = c(k_up_f, Linf_up_f),
-  parameter_label = c("k", "L[infty]"),
-  Model = model_name
-)
 
-ci_male <- data.frame(
-  sex = "Male",
-  estimate = c(k_hat_m, Linf_hat_m),
-  lower = c(k_low_m, Linf_low_m),
-  upper = c(k_up_m, Linf_up_m),
-  parameter_label = c("k", "L[infty]"),
-  Model = model_name
-)
+  if (!exists("ci_both")) stop("'ci_both' not found.")
 
-ci_both <- rbind(ci_female, ci_male)
-
-  ## Optional: clean ordering for consistent facet layout
-  ci_both$sex <- factor(ci_both$sex, levels = c("Female", "Male"))
-  
-  if (!is.factor(ci_both$parameter_label)) {
-    ci_both$parameter_label <- factor(
-      ci_both$parameter_label,
-      levels = c("k", "L[infty]")
-    )
-  }
-  
-  ## 2. Build CI plot
+  # Build plot
   p_aoas <- ggplot(ci_both,
                    aes(x = sex, y = estimate,
                        shape = sex, linetype = sex)) +
+
     geom_errorbar(aes(ymin = lower, ymax = upper),
                   width = 0.12, linewidth = 0.7, colour = "black") +
-    geom_point(size = 2.8, colour = "black") +
-    facet_grid(
-      parameter_label ~ Model,
-      scales   = "free_y",
-      labeller = labeller(
-        parameter_label = label_parsed,
-        Model           = label_parsed
-      )
-    ) +
-    labs(
-      title = "Profile-likelihood 95% confidence intervals for k and L\u221e\nunder alternative random-effects distributions",
-      x = "Sex",
-      y = "Estimate"
-    ) +
-    
-    # Female = open circle + solid CI; Male = filled circle + dashed CI
+
+    geom_point(size = 3, colour = "black") +
+
+    facet_grid(parameter_label ~ Model,
+               scales   = "free_y",
+               labeller = labeller(
+                 parameter_label = label_parsed,
+                 Model           = label_parsed
+               )) +
+
     scale_shape_manual(values = c("Female" = 1, "Male" = 16)) +
     scale_linetype_manual(values = c("Female" = "solid", "Male" = "dashed")) +
-    
+
+    labs(
+      x = "Sex",
+      y = "Estimate",
+      title = NULL
+    ) +
+
     theme_bw(base_size = 12) +
     theme(
-      plot.title   = element_text(size = 12, hjust = 0.5),
-      strip.text   = element_text(size = 11, face = "bold"),
-      strip.background = element_rect(fill = "grey95"),
-      axis.title   = element_text(size = 11),
-      axis.text    = element_text(size = 10),
-      legend.title = element_blank(),
-      legend.position = "top"
+      strip.text = element_text(face = "bold", size = 12),
+      strip.background = element_rect(fill = "grey92"),
+      legend.position = "top",
+      legend.title = element_blank()
     )
-  
-  ## 3. Save plot
-  if (!dir.exists("results/figures")) {
-    dir.create("results/figures", recursive = TRUE)
-  }
-  
-  ggsave("results/figures/fig6.png",
-         plot = p_aoas,
-         width = 6, height = 4, dpi = 300)
-  
-  ## 4. (Optional) Save CI dataset for reproducibility
+
+  # Save figure
+  dir.create("results/figures", recursive = TRUE, showWarnings = FALSE)
+  ggsave("results/figures/fig5.png", plot = p_aoas,
+         width = 7, height = 5, dpi = 300)
+
+  # Save CI dataset
   if (save_csv) {
-    if (!dir.exists("results/tables")) {
-      dir.create("results/tables", recursive = TRUE)
-    }
-    write.csv(ci_both,
-              "results/tables/fig6_ci_dataset.csv",
-              row.names = FALSE)
+    dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+    write.csv(ci_both, "results/tables/fig5_ci_dataset.csv", row.names = FALSE)
   }
-  
-  ## Return plot object invisibly
-  invisible(p_aoas)
+
+  p_aoas
 }
+
+
+test_fig6()
