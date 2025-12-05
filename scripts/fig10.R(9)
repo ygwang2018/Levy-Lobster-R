@@ -120,9 +120,7 @@ test_fig10 <- function() {
 
   Linf_m_fixed <- 228.04
 
-  # Output directory
-  if (!dir.exists("results/figures")) dir.create("results/figures", TRUE)
-  png("results/figures/growth_panel.png", width = 1200, height = 900, res = 150)
+  png("results/figures/fig9.png", width = 1200, height = 900, res = 150)
 
   par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
 
@@ -163,8 +161,6 @@ test_fig10 <- function() {
              expression("Males – Random-effects " * L[infinity]))
 
   dev.off()
-
-  cat("Saved: results/figures/fig10.png\n")
 
   return(invisible())
 }
