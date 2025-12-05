@@ -1,6 +1,52 @@
+library(dplyr)
+
+# 1. Convert mean/SD to lognormal parameters
+ln_params <- function(mean, sd) {
+  var <- sd^2
+  meanlog <- log(mean^2 / sqrt(var + mean^2))
+  sdlog   <- sqrt(log(1 + var / mean^2))
+  return(c(meanlog = meanlog, sdlog = sdlog))
+}
+
+# 2. Simulator for VB increments with Gamma errors
+simulate_growth <- function(
+    n, ni_vals, T0_range,
+    Linf_type = "fixed", Linf_par,
+    k, zeta, gam, b1, b2
+) {
+  res <- vector("list", n)
+  
+  for (i in 1:n) {
+    ni <- sample(ni_vals, 1)
+    T0 <- runif(1, T0_range[1], T0_range[2])
+    Ti <- cumsum(rexp(ni, rate = 1/365))
+    
+    # Generate Linf
+    Linf <- if (Linf_type == "fixed") {
+      Linf_par
+    } else {
+      rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
+    }
+    
+    # Expected increments
+    E_MI <- (Linf - b2) * (1 - exp(-k * (Ti - T0)))
+    E_MI[E_MI <= 0] <- 1e-6  # safety
+    
+    shape <- zeta
+    rate  <- zeta / E_MI
+    
+    MI <- rgamma(ni, shape = shape, rate = rate)
+    L <- b2 + cumsum(MI)
+    
+    res[[i]] <- data.frame(i = i, ni = ni, Ti = Ti, L = L, Linf = Linf)
+  }
+  
+  do.call(rbind, res)
+}
+
+# 3. Corrected panel plotting function
 plot_panel <- function(df, k, Linf_mean, title_expr) {
 
-  # 1. Base plot (empty canvas)
   plot(NA, NA,
        xlim = c(0, 10),
        ylim = range(df$L, na.rm = TRUE),
@@ -8,45 +54,114 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
        ylab = "Length (mm)",
        main = title_expr)
 
-  # 2. Stepwise lines (simulated growth)
   ids <- unique(df$i)
 
+  # Stepwise individual trajectories
   for (id in ids) {
     d <- df[df$i == id, ]
-
-    # Step function: repeat each time & length
     tt <- rep(d$Ti/365, each = 2)
     LL <- rep(d$L,    each = 2)
-    tt <- tt[-1]     # drop 1st
-    LL <- LL[-length(LL)]  # drop last
-
+    tt <- tt[-1]
+    LL <- LL[-length(LL)]
     lines(tt, LL, col = rgb(0,0,0,0.20), lwd = 1)
   }
 
-  # 3. Mean empirical stepwise curve
+  # Empirical mean curve (step-averaged)
   t_grid <- seq(0, 10, length.out = 500)
-
   mean_curve <- sapply(t_grid, function(t) {
-
     vals <- sapply(ids, function(id) {
       d <- df[df$i == id, ]
       idx <- max(which(d$Ti/365 <= t))
       if (length(idx) == 0) return(NA_real_)
       d$L[idx]
     })
-
     m <- mean(vals, na.rm = TRUE)
     if (!is.finite(m)) m <- NA_real_
     m
   })
 
-  # Guarantee equal lengths (avoids xy.coords error)
-  stopifnot(length(mean_curve) == length(t_grid))
-
-  # Smooth dashed line for empirical mean curve
   lines(t_grid, mean_curve, col = "black", lwd = 2, lty = 2)
 
-  # 4. Theoretical VB curve (cyan)
+  # Theoretical VB curve
   L_vb <- Linf_mean * (1 - exp(-k * t_grid))
   lines(t_grid, L_vb, col = "cyan3", lwd = 2)
+}
+
+# 4. FULL RESTORED test_fig10() FUNCTION
+test_fig10 <- function() {
+  
+  cat("Running test_fig10() ...\n")
+  set.seed(123)
+
+  n <- 100
+  t_grid <- seq(0, 10, length.out = 300)
+
+  # Female params
+  Linf_f_fixed <- 183.87
+  f_ln  <- ln_params(183.27, 12)
+  k_f   <- 0.283
+  zeta_f <- 75.055
+  gam_f  <- 12.535
+  b1_f <- -2.087
+  b2_f <- 0.011
+
+  # Male params
+  Linf_m_fixed <- 228.04
+  m_ln  <- ln_params(184.34, 12)
+  k_m   <- 0.2473
+  zeta_m <- 59.947
+  gam_m  <- 11.33
+  b1_m <- -1.984
+  b2_m <- 0.01
+  
+  # Open output file
+  if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
+  png("results/figures/growth_panel.png", width = 1400, height = 1100, res = 150)
+  
+  par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+
+  # Females fixed
+  res_f_fixed <- simulate_growth(
+    n, ni_vals = 4:15, T0_range = c(10,150),
+    Linf_type = "fixed", Linf_par = Linf_f_fixed,
+    k=k_f, zeta=zeta_f, gam=gam_f, b1=b1_f, b2=b2_f
+  )
+  plot_panel(res_f_fixed, k_f, Linf_f_fixed,
+             expression("Females – Fixed " * L[infinity]))
+
+  # Males fixed
+  res_m_fixed <- simulate_growth(
+    n, ni_vals = 2:15, T0_range = c(5,150),
+    Linf_type = "fixed", Linf_par = Linf_m_fixed,
+    k=k_m, zeta=zeta_m, gam=gam_m, b1=b1_m, b2=b2_m
+  )
+  plot_panel(res_m_fixed, k_m, Linf_m_fixed,
+             expression("Males – Fixed " * L[infinity]))
+
+  # Females random
+  res_f_random <- simulate_growth(
+    n, ni_vals = 4:15, T0_range = c(10,150),
+    Linf_type = "lognormal", Linf_par = c(f_ln["meanlog"], f_ln["sdlog"]),
+    k=k_f, zeta=zeta_f, gam=gam_f, b1=b1_f, b2=b2_f
+  )
+  plot_panel(res_f_random, k_f, 183.27,
+             expression("Females – Random-effects " * L[infinity]))
+
+  # Males random
+  res_m_random <- simulate_growth(
+    n, ni_vals = 2:15, T0_range = c(5,150),
+    Linf_type = "lognormal", Linf_par = c(m_ln["meanlog"], m_ln["sdlog"]),
+    k=k_m, zeta=zeta_m, gam=gam_m, b1=b1_m, b2=b2_m
+  )
+  plot_panel(res_m_random, k_m, 184.34,
+             expression("Males – Random-effects " * L[infinity]))
+
+  dev.off()
+    
+  invisible(list(
+    fixed_f  = res_f_fixed,
+    fixed_m  = res_m_fixed,
+    random_f = res_f_random,
+    random_m = res_m_random
+  ))
 }
