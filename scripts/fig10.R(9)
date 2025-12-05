@@ -39,5 +39,4 @@ test_fig10 <- function() {
   plot_panel_A(sim_mr, k_m, 184.34, expression("Males – Random-effects "   * L[infinity]))
   
   dev.off()
-  cat("Saved: results/figures/fig9_simulation.png\n")
-}
+  }
