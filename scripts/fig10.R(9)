@@ -28,9 +28,6 @@ test_fig10 <- function() {
   sim_mr <- simulate_growth_A(n, k_m, zeta_m, "lognormal", ln_m, glm_int_m)
   sim_mr$id <- rep(1:n, table(sim_mr$t==0)[1])
   
-  # Output
-  if (!dir.exists("results/figures")) dir.create("results/figures", recursive=TRUE)
-  png("results/figures/fig9_simulation.png", width=1500, height=1200, res=150)
   
   par(mfrow=c(2,2), mar=c(4,4,3,1))
   plot_panel_A(sim_f,  k_f, Linf_f, expression("Females – Fixed " * L[infinity]))
