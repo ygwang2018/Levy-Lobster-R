@@ -1,192 +1,52 @@
-library(dplyr)
-
-# 1. Utility: convert mean & sd to lognormal parameters
-ln_params <- function(mean, sd) {
-  var <- sd^2
-  meanlog <- log(mean^2 / sqrt(mean^2 + var))
-  sdlog   <- sqrt(log(1 + var/mean^2))
-  c(meanlog = meanlog, sdlog = sdlog)
-}
-
-# 2. Simulate growth under BL + Gamma-IP models
-simulate_growth <- function(
-    n,                     # number of individuals
-    ni_vals,               # number of moults per individual
-    T0_range,              # starting age range in days
-    Linf_type = "fixed",   # "fixed" or "lognormal"
-    Linf_par,              # numeric or c(meanlog, sdlog)
-    k, zeta,               # BL MI parameters
-    gam, b1, b2            # Gamma-IP parameters
-) {
-  out <- vector("list", n)
-
-  for (i in 1:n) {
-
-    ni <- sample(ni_vals, 1)           # number of moults
-    T_age <- runif(1, T0_range[1], T0_range[2]) # starting age (days)
-
-    # Choose L_inf
-    Linf <- if (Linf_type == "fixed") {
-      Linf_par
-    } else {
-      rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
-    }
-
-    # Start length small
-    Lt <- runif(1, 5, 15)
-
-    times <- numeric(ni)
-    lengths <- numeric(ni)
-
-    for (j in 1:ni) {
-
-      # 1) IP model for Δt
-      mu_IP <- exp(b1 + b2 * Lt)
-      dt <- rgamma(1, shape = gam * mu_IP, scale = 1/gam)
-      T_age <- T_age + dt * 365.25    # convert years to days
-
-      # 2) BL MI model for ΔL
-      a <- (1 - exp(-k * (dt))) * (zeta - 1)
-      b <- exp(-k * (dt))       * (zeta - 1)
-      Lambda <- rbeta(1, a, b)
-      dL <- Lambda * (Linf - Lt)
-
-      Lt <- Lt + dL
-
-      times[j]   <- T_age / 365.25   # convert to years
-      lengths[j] <- Lt
-    }
-
-    out[[i]] <- data.frame(id = i, time = times, L = lengths, Linf = Linf)
-  }
-
-  bind_rows(out)
-}
-
-# 3. Plotting panel
 plot_panel <- function(df, k, Linf_mean, title_expr) {
-  
-  # ---------------------------------------------------------
-  # 1. Prepare plotting region
-  # ---------------------------------------------------------
-  plot(df$Ti/365, df$L,
-       type = "n",
-       xlab = "Years", 
+
+  # 1. Base plot (empty canvas)
+  plot(NA, NA,
+       xlim = c(0, 10),
+       ylim = range(df$L, na.rm = TRUE),
+       xlab = "Years",
        ylab = "Length (mm)",
-       main = title_expr,
-       ylim = c(0, max(df$L)*1.05))
-  
-  # ---------------------------------------------------------
-  # 2. Draw stepwise simulated growth trajectories
-  # ---------------------------------------------------------
+       main = title_expr)
+
+  # 2. Stepwise lines (simulated growth)
   ids <- unique(df$i)
+
   for (id in ids) {
     d <- df[df$i == id, ]
-    # Stepwise (left-constant) line segments
-    segments(x0 = d$Ti[-nrow(d)]/365,
-             y0 = d$L[-nrow(d)],
-             x1 = d$Ti[-1]/365,
-             y1 = d$L[-nrow(d)],
-             col = rgb(0, 0, 0, 0.25))
+
+    # Step function: repeat each time & length
+    tt <- rep(d$Ti/365, each = 2)
+    LL <- rep(d$L,    each = 2)
+    tt <- tt[-1]     # drop 1st
+    LL <- LL[-length(LL)]  # drop last
+
+    lines(tt, LL, col = rgb(0,0,0,0.20), lwd = 1)
   }
-  
-  # 3. Compute simulated mean trajectory (cyan curve)
+
+  # 3. Mean empirical stepwise curve
   t_grid <- seq(0, 10, length.out = 500)
+
   mean_curve <- sapply(t_grid, function(t) {
-    mean(sapply(ids, function(id) {
+
+    vals <- sapply(ids, function(id) {
       d <- df[df$i == id, ]
       idx <- max(which(d$Ti/365 <= t))
-      if (length(idx) == 0) return(NA)
-      return(d$L[idx])
-    }), na.rm = TRUE)
+      if (length(idx) == 0) return(NA_real_)
+      d$L[idx]
+    })
+
+    m <- mean(vals, na.rm = TRUE)
+    if (!is.finite(m)) m <- NA_real_
+    m
   })
-  
-  lines(t_grid, mean_curve, col = "cyan", lwd = 2)
-  
-  # 4. Von Bertalanffy fitted curve (black dashed)
-  #     L(t) = L∞ (1 - exp(-k t))
-  vb_curve <- Linf_mean * (1 - exp(-k * t_grid))
-  lines(t_grid, vb_curve, col = "black", lwd = 2, lty = 2)
-}
 
-# 4. Main figure function
-test_fig10 <- function() {
+  # Guarantee equal lengths (avoids xy.coords error)
+  stopifnot(length(mean_curve) == length(t_grid))
 
-  set.seed(123)
+  # Smooth dashed line for empirical mean curve
+  lines(t_grid, mean_curve, col = "black", lwd = 2, lty = 2)
 
-  n <- 60      # smaller sample for clearer figure
-
-  # Female parameters
-  f_ln <- ln_params(183.27, 12)
-  meanlog_f <- f_ln["meanlog"]
-  sdlog_f   <- f_ln["sdlog"]
-
-  k_f    <- 0.283
-  zeta_f <- 75.055
-  gam_f  <- 12.535
-  b1_f   <- -2.087
-  b2_f   <-  0.011
-
-  Linf_f_fixed <- 183.87
-
-  # Male parameters
-  m_ln <- ln_params(184.34, 12)
-  meanlog_m <- m_ln["meanlog"]
-  sdlog_m   <- m_ln["sdlog"]
-
-  k_m    <- 0.2473
-  zeta_m <- 59.947
-  gam_m  <- 11.33
-  b1_m   <- -1.984
-  b2_m   <-  0.010
-
-  Linf_m_fixed <- 228.04
-
-  # Output directory
-  if (!dir.exists("results/figures")) dir.create("results/figures", TRUE)
-  png("results/figures/growth_panel.png", width = 1200, height = 900, res = 150)
-
-  par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
-
-  # Females — Fixed
-  df_f_fix <- simulate_growth(
-    n = n, ni_vals = 4:15, T0_range = c(0, 300),
-    Linf_type = "fixed", Linf_par = Linf_f_fixed,
-    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
-  )
-  plot_panel(df_f_fix, k_f, Linf_f_fixed,
-             expression("Females – Fixed " * L[infinity]))
-
-  # Males — Fixed
-  df_m_fix <- simulate_growth(
-    n = n, ni_vals = 2:15, T0_range = c(0, 300),
-    Linf_type = "fixed", Linf_par = Linf_m_fixed,
-    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
-  )
-  plot_panel(df_m_fix, k_m, Linf_m_fixed,
-             expression("Males – Fixed " * L[infinity]))
-
-  # Females — Random-effects
-  df_f_rand <- simulate_growth(
-    n = n, ni_vals = 4:15, T0_range = c(0, 300),
-    Linf_type = "lognormal", Linf_par = c(meanlog_f, sdlog_f),
-    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
-  )
-  plot_panel(df_f_rand, k_f, 183.27,
-             expression("Females – Random-effects " * L[infinity]))
-
-  # Males — Random-effects
-  df_m_rand <- simulate_growth(
-    n = n, ni_vals = 2:15, T0_range = c(0, 300),
-    Linf_type = "lognormal", Linf_par = c(meanlog_m, sdlog_m),
-    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
-  )
-  plot_panel(df_m_rand, k_m, 184.34,
-             expression("Males – Random-effects " * L[infinity]))
-
-  dev.off()
-
-  cat("Saved: results/figures/growth_panel.png\n")
-
-  return(invisible())
+  # 4. Theoretical VB curve (cyan)
+  L_vb <- Linf_mean * (1 - exp(-k * t_grid))
+  lines(t_grid, L_vb, col = "cyan3", lwd = 2)
 }
