@@ -87,5 +87,5 @@ p <- ggplot(plot_data, aes(x = MI_res, y = IP_res)) +
   )
 
 # Save to results/figures
-ggsave("results/figures/mi_ip_residuals.png", plot = p,
+ggsave("results/figures/fig3.png", plot = p,
        width = 8, height = 5, dpi = 300)
