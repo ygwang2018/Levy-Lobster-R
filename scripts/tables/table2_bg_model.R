@@ -1,9 +1,60 @@
-library(dplyr)
-
 test_table2_bg <- function() {
   cat("Running test for table2 (BG model with Gamma prior)...\n")
   
   dat <- lobster
+  
+  # --- Helper functions ---
+  ff_BG <- function(Linf, k, zeta, alpha, beta, Xi, Ti, Li) {
+    if (Linf <= max(Li) + 1e-8) return(-1e12)
+    log_prior <- (alpha - 1)*log(Linf) - (Linf/beta) -
+      alpha*log(beta) - lgamma(alpha)
+    out <- log_prior
+    for (j in seq_along(Xi)) {
+      denom <- Linf - Li[j]
+      if (denom <= 1e-12) return(-1e12)
+      x <- Xi[j] / denom
+      if (x <= 1e-12 || x >= 1 - 1e-12) return(-1e12)
+      a <- (1 - exp(-k * Ti[j])) * (zeta - 1)
+      b <- exp(-k * Ti[j]) * (zeta - 1)
+      if (a <= 0 || b <= 0) return(-1e12)
+      out <- out + dbeta(x, a, b, log = TRUE) - log(denom)
+    }
+    return(out)
+  }
+  
+  kernel_BG <- function(Linf, Mi, k, zeta, alpha, beta, Xi, Ti, Li) {
+    val <- ff_BG(Linf, k, zeta, alpha, beta, Xi, Ti, Li)
+    exp(val - Mi)
+  }
+  
+  safe_integrate <- function(fun, lower, upper, n=1200) {
+    xs <- seq(lower, upper, length.out=n)
+    vals <- sapply(xs, fun)
+    dx <- (upper - lower)/(n-1)
+    sum(vals) * dx
+  }
+  
+  LL_BG <- function(theta, dat, MinLinf, MaxLinf) {
+    k     <- theta[1]; zeta  <- theta[2]
+    alpha <- theta[3]; beta  <- theta[4]
+    if (k <= 0 || zeta <= 1.01 || alpha <= 0 || beta <= 0) return(1e12)
+    LLtot <- 0
+    for (id in unique(dat$LOBSTER)) {
+      dati <- subset(dat, LOBSTER == id)
+      Xi <- dati$INC; Li <- dati$PL; Ti <- dati$INT / 365.25
+      Mi <- optimize(
+        function(Ls) ff_BG(Ls, k, zeta, alpha, beta, Xi, Ti, Li),
+        interval = c(MinLinf, MaxLinf), maximum = TRUE
+      )$objective
+      val <- safe_integrate(
+        function(Ls) kernel_BG(Ls, Mi, k, zeta, alpha, beta, Xi, Ti, Li),
+        MinLinf, MaxLinf
+      )
+      if (!is.finite(val) || val <= 0) return(1e12)
+      LLtot <- LLtot + log(val) + Mi
+    }
+    return(-LLtot)
+  }
   
   # --- Female subset ---
   dat_female <- dat[dat$SEX == 1, ]
@@ -28,7 +79,7 @@ test_table2_bg <- function() {
   
   # --- Male subset ---
   dat_male <- dat[dat$SEX == 2, ]
-  init_theta_BG_male <- c(0.1, 4, 10, 17)
+  init_theta_BG_male <- c(k=0.1, zeta=4, alpha=10, beta=17)
   
   res_male_BG <- optim(
     par     = init_theta_BG_male,
