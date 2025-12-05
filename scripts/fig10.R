@@ -1,4 +1,6 @@
-# 1. Lognormal parameter helper
+library(dplyr)
+
+# 1. Convert (mean, sd) to (meanlog, sdlog)
 ln_params <- function(mean, sd) {
   var <- sd^2
   meanlog <- log(mean^2 / sqrt(var + mean^2))
@@ -6,164 +8,146 @@ ln_params <- function(mean, sd) {
   return(c(meanlog = meanlog, sdlog = sdlog))
 }
 
+# 2. Correct von Bertalanffy–Gamma growth simulator
 simulate_growth <- function(
     n, ni_vals, T0_range,
     Linf_type = "fixed", Linf_par,
-    k, zeta, gam, b1, b2
+    k, L0 = 5           # starting length = 5 mm
 ) {
-  res <- vector("list", n)
   
-  for (i in 1:n) {
-    ni <- sample(ni_vals, 1)
-
-    # Initial time in days
-    T0 <- runif(1, T0_range[1], T0_range[2])
-
-    # FIXED: ensure time never goes backwards
-    Ti <- T0 + cumsum(rexp(ni, rate = 1/365))
+  out <- vector("list", n)
+  
+  for (i in seq_len(n)) {
     
-    # Generate Linf
+    ni  <- sample(ni_vals, 1)
+    
+    # Exponential inter-moult times
+    dT <- rexp(ni, rate = 1/365)
+    Ti <- cumsum(dT)
+    
+    # Generate individual asymptotic length
     Linf <- if (Linf_type == "fixed") {
       Linf_par
-    } else if (Linf_type == "lognormal") {
+    } else {
       rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
     }
     
-    # Expected increments
-    E_MI <- (Linf - b2) * (1 - exp(-k * (Ti - T0)))
-
-    # Stabilise numerically
-    E_MI[E_MI < 1e-6] <- 1e-6
+    # Track actual growth
+    L <- numeric(ni)
+    L_prev <- L0
     
-    # Gamma increment
-    shape <- zeta
-    rate  <- zeta / E_MI
-
-    MI <- rgamma(ni, shape = shape, rate = rate)
+    for (j in seq_len(ni)) {
+      # Expected VB increment
+      mu <- (Linf - L_prev) * (1 - exp(-k * dT[j]))
+      
+      # Gamma noise with moderate shape → realistic variability
+      shape <- 15
+      scale <- mu / shape
+      MI <- rgamma(1, shape = shape, scale = scale)
+      
+      L[j] <- L_prev + MI
+      L_prev <- L[j]
+    }
     
-    L <- b2 + cumsum(MI)
-    
-    res[[i]] <- data.frame(
-      i = i, ni = ni, Ti = Ti, L = L, Linf = Linf
+    out[[i]] <- data.frame(
+      id   = i,
+      Ti   = Ti,
+      L    = L,
+      Linf = Linf
     )
   }
   
-  return(do.call(rbind, res))
+  bind_rows(out)
 }
 
-plot_panel <- function(df, k, Linf_mean, title_expr) {
+# 3. Plot panel (fixed or random-effects L∞)
+plot_panel <- function(df, k, Linf_mean, title_expr, L0 = 5) {
   
   plot(df$Ti/365, df$L,
-       type = "n",
-       xlab = "Years", ylab = "Carapace Length (mm)",
-       main = title_expr)
+       type="n",
+       xlab="Years", ylab="Length (mm)",
+       main=title_expr)
   
-  ids <- unique(df$i)
+  # Individual growth trajectories
+  ids <- unique(df$id)
   for (id in ids) {
-    d <- df[df$i == id, ]
-    lines(d$Ti/365, d$L, col = rgb(0,0,0,0.25))
+    d <- df[df$id == id, ]
+    lines(d$Ti/365, d$L, col = rgb(0,0,0,0.25), lwd=1)
   }
   
-  # VB curve
-  t_grid <- seq(0, 10, length.out = 300)
-  Lhat <- Linf_mean * (1 - exp(-k * t_grid))
-  lines(t_grid, Lhat, col = "red", lwd = 2)
+  # Correct VB curve
+  t <- seq(0, max(df$Ti)/365, length.out=300)
+  Lhat <- Linf_mean - (Linf_mean - L0)*exp(-k*t)
+  lines(t, Lhat, col="cyan", lwd=2)
 }
 
-
+# 4. Main figure wrapper
 test_fig10 <- function() {
   
   set.seed(123)
   
-  n <- 100  # number of simulated lobsters
+  n <- 80
   
-  ## FEMALE PARAMETERS 
+  # === Female parameters ===
   Linf_f_fixed <- 183.87
-  f_ln  <- ln_params(183.27, 12)
-  meanlog_f <- f_ln["meanlog"]
-  sdlog_f   <- f_ln["sdlog"]
+  f_ln <- ln_params(183.27, 12)
+  k_f  <- 0.283
   
-  k_f    <- 0.283
-  zeta_f <- 75.055
-  gam_f  <- 12.535
-  b1_f   <- -2.087
-  b2_f   <-  0.011
-  
-  ## MALE PARAMETERS
+  # === Male parameters ===
   Linf_m_fixed <- 228.04
-  m_ln  <- ln_params(184.34, 12)
-  meanlog_m <- m_ln["meanlog"]
-  sdlog_m   <- m_ln["sdlog"]
+  m_ln <- ln_params(184.34, 12)
+  k_m  <- 0.2473
   
-  k_m    <- 0.2473
-  zeta_m <- 59.947
-  gam_m  <- 11.33
-  b1_m   <- -1.984
-  b2_m   <-  0.010
+    
+  png("results/figures/growth_panel.png",
+      width = 1400, height = 1100, res = 150)
   
+  par(mfrow = c(2, 2), mar = c(4,4,3,1))
   
-  png("results/figures/fig10.png",
-      width = 1200, height = 900, res = 150)
-  
-  par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
-  
+  # 1. Females – Fixed L∞
   res_f_fixed <- simulate_growth(
-    n        = n,
-    ni_vals  = 4:15,
+    n = n, ni_vals = 4:15,
     T0_range = c(10,150),
     Linf_type = "fixed",
     Linf_par  = Linf_f_fixed,
-    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
+    k = k_f
   )
-  
   plot_panel(res_f_fixed, k_f, Linf_f_fixed,
              expression("Females – Fixed " * L[infinity]))
   
-  ## 2. MALES – Fixed L∞
+  # 2. Males – Fixed L∞
   res_m_fixed <- simulate_growth(
-    n        = n,
-    ni_vals  = 2:15,
+    n = n, ni_vals = 2:15,
     T0_range = c(5,150),
     Linf_type = "fixed",
     Linf_par  = Linf_m_fixed,
-    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
+    k = k_m
   )
-  
   plot_panel(res_m_fixed, k_m, Linf_m_fixed,
              expression("Males – Fixed " * L[infinity]))
   
-  ## 3. FEMALES – Random-effects L∞
+  # 3. Females – Random-effects L∞
   res_f_random <- simulate_growth(
-    n        = n,
-    ni_vals  = 4:15,
+    n = n, ni_vals = 4:15,
     T0_range = c(10,150),
     Linf_type = "lognormal",
-    Linf_par  = c(meanlog_f, sdlog_f),
-    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
+    Linf_par  = c(f_ln["meanlog"], f_ln["sdlog"]),
+    k = k_f
   )
-  
   plot_panel(res_f_random, k_f, 183.27,
              expression("Females – Random-effects " * L[infinity]))
   
-  ##  MALES – Random-effects L∞
+  # 4. Males – Random-effects L∞
   res_m_random <- simulate_growth(
-    n        = n,
-    ni_vals  = 2:15,
+    n = n, ni_vals = 2:15,
     T0_range = c(5,150),
     Linf_type = "lognormal",
-    Linf_par  = c(meanlog_m, sdlog_m),
-    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
+    Linf_par  = c(m_ln["meanlog"], m_ln["sdlog"]),
+    k = k_m
   )
-  
   plot_panel(res_m_random, k_m, 184.34,
              expression("Males – Random-effects " * L[infinity]))
   
   dev.off()
-    
-  return(list(
-    fixed_f  = res_f_fixed,
-    fixed_m  = res_m_fixed,
-    random_f = res_f_random,
-    random_m = res_m_random
-  ))
-}
+  }
+
