@@ -1,8 +1,5 @@
 library(dplyr)
 
-# -----------------------------------------------------------
-# 1. Utility: convert mean & sd to lognormal parameters
-# -----------------------------------------------------------
 ln_params <- function(mean, sd) {
     var <- sd^2
     meanlog <- log(mean^2 / sqrt(mean^2 + var))
@@ -10,9 +7,6 @@ ln_params <- function(mean, sd) {
     c(meanlog = meanlog, sdlog = sdlog)
 }
 
-# -----------------------------------------------------------
-# 2. Simulate growth under BL + Gamma-IP models
-# -----------------------------------------------------------
 simulate_growth <- function(
         n,                     # number of individuals
         ni_vals,               # number of moults per individual
@@ -67,9 +61,6 @@ simulate_growth <- function(
     bind_rows(out)
 }
 
-# -----------------------------------------------------------
-# 3. Plotting panel
-# -----------------------------------------------------------
 plot_panel_A <- function(sim, k, Linf, mainlab) {
     
     # Compute deterministic VB curve for comparison
