@@ -2,7 +2,7 @@ library(ggplot2)
 library(gridExtra)
 
 ## test_fig9: smoke test for MI residual diagnostics
-test_fig9 <- function() {
+test_fig8 <- function() {
   
   # Read data
   df <- lobster
@@ -64,11 +64,9 @@ test_fig9 <- function() {
   
   # Save panel
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
-  png("results/figures/fig9.png", width = 1200, height = 900, res = 150)
+  png("results/figures/fig8.png", width = 1200, height = 900, res = 150)
   grid.arrange(p1, p2, p3, p4, ncol = 2)
   dev.off()
-  
-  cat("fig9.png saved to results/figures.\n")
   
   invisible(list(model = model, plots = list(p1, p2, p3, p4)))
 }
