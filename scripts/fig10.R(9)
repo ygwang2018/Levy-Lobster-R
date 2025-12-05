@@ -1,166 +1,158 @@
 library(dplyr)
 
 ln_params <- function(mean, sd) {
-    var <- sd^2
-    meanlog <- log(mean^2 / sqrt(mean^2 + var))
-    sdlog   <- sqrt(log(1 + var/mean^2))
-    c(meanlog = meanlog, sdlog = sdlog)
+  var <- sd^2
+  meanlog <- log(mean^2 / sqrt(mean^2 + var))
+  sdlog   <- sqrt(log(1 + var/mean^2))
+  c(meanlog = meanlog, sdlog = sdlog)
 }
 
 simulate_growth <- function(
-        n,                     # number of individuals
-        ni_vals,               # number of moults per individual
-        T0_range,              # starting age range in days
-        Linf_type = "fixed",   # "fixed" or "lognormal"
-        Linf_par,              # numeric or c(meanlog, sdlog)
-        k, zeta,               # BL MI parameters
-        gam, b1, b2            # Gamma-IP parameters
+    n,                     # number of individuals
+    ni_vals,               # number of moults per individual
+    T0_range,              # starting age range in days
+    Linf_type = "fixed",   # "fixed" or "lognormal"
+    Linf_par,              # numeric or c(meanlog, sdlog)
+    k, zeta,               # BL MI parameters
+    gam, b1, b2            # Gamma-IP parameters
 ) {
-    out <- vector("list", n)
-    
-    for (i in 1:n) {
-        
-        ni <- sample(ni_vals, 1)           # number of moults
-        T_age <- runif(1, T0_range[1], T0_range[2]) # starting age (days)
-        
-        # Choose L_inf
-        Linf <- if (Linf_type == "fixed") {
-            Linf_par
-        } else {
-            rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
-        }
-        
-        # Start length small
-        Lt <- runif(1, 5, 15)
-        
-        times <- numeric(ni)
-        lengths <- numeric(ni)
-        
-        for (j in 1:ni) {
-            
-            # 1) IP model for Δt
-            mu_IP <- exp(b1 + b2 * Lt)
-            dt <- rgamma(1, shape = gam * mu_IP, scale = 1/gam)
-            T_age <- T_age + dt * 365.25    # convert years to days
-            
-            # 2) BL MI model for ΔL
-            a <- (1 - exp(-k * (dt))) * (zeta - 1)
-            b <- exp(-k * (dt))       * (zeta - 1)
-            Lambda <- rbeta(1, a, b)
-            dL <- Lambda * (Linf - Lt)
-            
-            Lt <- Lt + dL
-            
-            times[j]   <- T_age / 365.25   # convert to years
-            lengths[j] <- Lt
-        }
-        
-        out[[i]] <- data.frame(id = i, time = times, L = lengths, Linf = Linf)
+  out <- vector("list", n)
+
+  for (i in 1:n) {
+
+    ni <- sample(ni_vals, 1)           # number of moults
+    T_age <- runif(1, T0_range[1], T0_range[2]) # starting age (days)
+
+    # Choose L_inf
+    Linf <- if (Linf_type == "fixed") {
+      Linf_par
+    } else {
+      rlnorm(1, meanlog = Linf_par[1], sdlog = Linf_par[2])
     }
-    
-    bind_rows(out)
+
+    # Start length small
+    Lt <- runif(1, 5, 15)
+
+    times <- numeric(ni)
+    lengths <- numeric(ni)
+
+    for (j in 1:ni) {
+
+      # 1) IP model for Δt
+      mu_IP <- exp(b1 + b2 * Lt)
+      dt <- rgamma(1, shape = gam * mu_IP, scale = 1/gam)
+      T_age <- T_age + dt * 365.25    # convert years to days
+
+      # 2) BL MI model for ΔL
+      a <- (1 - exp(-k * (dt))) * (zeta - 1)
+      b <- exp(-k * (dt))       * (zeta - 1)
+      Lambda <- rbeta(1, a, b)
+      dL <- Lambda * (Linf - Lt)
+
+      Lt <- Lt + dL
+
+      times[j]   <- T_age / 365.25   # convert to years
+      lengths[j] <- Lt
+    }
+
+    out[[i]] <- data.frame(id = i, time = times, L = lengths, Linf = Linf)
+  }
+
+  bind_rows(out)
 }
 
-plot_panel_A <- function(sim, k, Linf, mainlab) {
-    
-    # Compute deterministic VB curve for comparison
-    t_seq <- seq(0, max(sim$t), length.out = 200)
-    L_det <- Linf - (Linf - sim$L[1]) * exp(-k * t_seq)
-    
-    plot(sim$t, sim$L,
-         type = "n",
-         main = mainlab,
-         xlab = "Time (T)",
-         ylab = "Length (L)",
-         cex.main = 1.1)
-    
-    # Plot individual simulated paths
-    ids <- unique(sim$id)
-    for (id in ids) {
-        dat <- sim[sim$id == id, ]
-        lines(dat$t, dat$L, col = adjustcolor("steelblue4", alpha.f = 0.35))
-    }
-    
-    # Add deterministic VB curve
-    lines(t_seq, L_det, col="black", lwd=2, lty=2)
-    
-    # Add Linf line
-    abline(h = Linf, col="grey50", lty=3)
+plot_panel <- function(df, k, Linf_mean, title_expr) {
+
+  plot(df$time, df$L, type = "s",
+       xlab = "Years", ylab = "Length (mm)",
+       main = title_expr,
+       xlim = c(0, 10), ylim = c(0, 200))
+
+  ids <- unique(df$id)
+  for (id in ids) {
+    d <- df[df$id == id, ]
+    lines(d$time, d$L, col = rgb(0,0,0,0.25))
+  }
+
+  # VB curve
+  t_grid <- seq(0, 10, length.out = 300)
+  Lhat <- Linf_mean * (1 - exp(-k * t_grid))
+  lines(t_grid, Lhat, col = "cyan", lwd = 2)
 }
 
 
 test_fig10 <- function() {
-    
-    set.seed(123)
-    
-    n <- 60      # smaller sample for clearer figure
-    
-    # Female parameters
-    f_ln <- ln_params(183.27, 12)
-    meanlog_f <- f_ln["meanlog"]
-    sdlog_f   <- f_ln["sdlog"]
-    
-    k_f    <- 0.283
-    zeta_f <- 75.055
-    gam_f  <- 12.535
-    b1_f   <- -2.087
-    b2_f   <-  0.011
-    
-    Linf_f_fixed <- 183.87
-    
-    # Male parameters
-    m_ln <- ln_params(184.34, 12)
-    meanlog_m <- m_ln["meanlog"]
-    sdlog_m   <- m_ln["sdlog"]
-    
-    k_m    <- 0.2473
-    zeta_m <- 59.947
-    gam_m  <- 11.33
-    b1_m   <- -1.984
-    b2_m   <-  0.010
-    
-    Linf_m_fixed <- 228.04
-    
 
-    par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
-    
-    # Females — Fixed
-    df_f_fix <- simulate_growth(
-        n = n, ni_vals = 4:15, T0_range = c(0, 300),
-        Linf_type = "fixed", Linf_par = Linf_f_fixed,
-        k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
-    )
-    plot_panel(df_f_fix, k_f, Linf_f_fixed,
-               expression("Females – Fixed " * L[infinity]))
-    
-    # Males — Fixed
-    df_m_fix <- simulate_growth(
-        n = n, ni_vals = 2:15, T0_range = c(0, 300),
-        Linf_type = "fixed", Linf_par = Linf_m_fixed,
-        k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
-    )
-    plot_panel(df_m_fix, k_m, Linf_m_fixed,
-               expression("Males – Fixed " * L[infinity]))
-    
-    # Females — Random-effects
-    df_f_rand <- simulate_growth(
-        n = n, ni_vals = 4:15, T0_range = c(0, 300),
-        Linf_type = "lognormal", Linf_par = c(meanlog_f, sdlog_f),
-        k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
-    )
-    plot_panel(df_f_rand, k_f, 183.27,
-               expression("Females – Random-effects " * L[infinity]))
-    
-    # Males — Random-effects
-    df_m_rand <- simulate_growth(
-        n = n, ni_vals = 2:15, T0_range = c(0, 300),
-        Linf_type = "lognormal", Linf_par = c(meanlog_m, sdlog_m),
-        k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
-    )
-    plot_panel(df_m_rand, k_m, 184.34,
-               expression("Males – Random-effects " * L[infinity]))
-    
-    dev.off()
-    
-    return(invisible())
+  set.seed(123)
+
+  n <- 60      # smaller sample for clearer figure
+
+  # Female parameters
+  f_ln <- ln_params(183.27, 12)
+  meanlog_f <- f_ln["meanlog"]
+  sdlog_f   <- f_ln["sdlog"]
+
+  k_f    <- 0.283
+  zeta_f <- 75.055
+  gam_f  <- 12.535
+  b1_f   <- -2.087
+  b2_f   <-  0.011
+
+  Linf_f_fixed <- 183.87
+
+  # Male parameters
+  m_ln <- ln_params(184.34, 12)
+  meanlog_m <- m_ln["meanlog"]
+  sdlog_m   <- m_ln["sdlog"]
+
+  k_m    <- 0.2473
+  zeta_m <- 59.947
+  gam_m  <- 11.33
+  b1_m   <- -1.984
+  b2_m   <-  0.010
+
+  Linf_m_fixed <- 228.04
+
+  
+  par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+
+  # Females — Fixed
+  df_f_fix <- simulate_growth(
+    n = n, ni_vals = 4:15, T0_range = c(0, 300),
+    Linf_type = "fixed", Linf_par = Linf_f_fixed,
+    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
+  )
+  plot_panel(df_f_fix, k_f, Linf_f_fixed,
+             expression("Females – Fixed " * L[infinity]))
+
+  # Males — Fixed
+  df_m_fix <- simulate_growth(
+    n = n, ni_vals = 2:15, T0_range = c(0, 300),
+    Linf_type = "fixed", Linf_par = Linf_m_fixed,
+    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
+  )
+  plot_panel(df_m_fix, k_m, Linf_m_fixed,
+             expression("Males – Fixed " * L[infinity]))
+
+  # Females — Random-effects
+  df_f_rand <- simulate_growth(
+    n = n, ni_vals = 4:15, T0_range = c(0, 300),
+    Linf_type = "lognormal", Linf_par = c(meanlog_f, sdlog_f),
+    k = k_f, zeta = zeta_f, gam = gam_f, b1 = b1_f, b2 = b2_f
+  )
+  plot_panel(df_f_rand, k_f, 183.27,
+             expression("Females – Random-effects " * L[infinity]))
+
+  # Males — Random-effects
+  df_m_rand <- simulate_growth(
+    n = n, ni_vals = 2:15, T0_range = c(0, 300),
+    Linf_type = "lognormal", Linf_par = c(meanlog_m, sdlog_m),
+    k = k_m, zeta = zeta_m, gam = gam_m, b1 = b1_m, b2 = b2_m
+  )
+  plot_panel(df_m_rand, k_m, 184.34,
+             expression("Males – Random-effects " * L[infinity]))
+
+  dev.off()
+
+  return(invisible())
 }
