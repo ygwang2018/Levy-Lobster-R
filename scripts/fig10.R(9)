@@ -61,9 +61,12 @@ simulate_growth <- function(
   bind_rows(out)
 }
 
+# -----------------------------------------------------------
+# 3. Plotting panel
+# -----------------------------------------------------------
 plot_panel <- function(df, k, Linf_mean, title_expr) {
 
-  plot(df$time, df$L, type = "s",
+  plot(df$time, df$L, type = "n",
        xlab = "Years", ylab = "Length (mm)",
        main = title_expr,
        xlim = c(0, 10), ylim = c(0, 200))
@@ -71,15 +74,21 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
   ids <- unique(df$id)
   for (id in ids) {
     d <- df[df$id == id, ]
-    lines(d$time, d$L, col = rgb(0,0,0,0.25))
+    ## STEPWISE trajectories: type = "s"
+    lines(d$time, d$L,
+          type = "s",                 # <- this makes it stepwise
+          col  = rgb(0, 0, 0, 0.25),
+          lwd  = 1)
   }
 
-  # VB curve
+  # Smooth VB curve (keep as before)
   t_grid <- seq(0, 10, length.out = 300)
   Lhat <- Linf_mean * (1 - exp(-k * t_grid))
   lines(t_grid, Lhat, col = "cyan", lwd = 2)
 }
 
+# -----------------------------------------------------------
+# 4. Main figure function
 
 test_fig10 <- function() {
 
@@ -113,7 +122,10 @@ test_fig10 <- function() {
 
   Linf_m_fixed <- 228.04
 
-  
+  # Output directory
+  if (!dir.exists("results/figures")) dir.create("results/figures", TRUE)
+  png("results/figures/growth_panel.png", width = 1200, height = 900, res = 150)
+
   par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
 
   # Females — Fixed
@@ -153,6 +165,8 @@ test_fig10 <- function() {
              expression("Males – Random-effects " * L[infinity]))
 
   dev.off()
+
+  cat("Saved: results/figures/growth_panel.png\n")
 
   return(invisible())
 }
