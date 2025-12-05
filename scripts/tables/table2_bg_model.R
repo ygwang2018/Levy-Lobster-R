@@ -1,13 +1,12 @@
 test_table2_bg <- function() {
-  cat("Running test for table2 (BG model with Gamma prior)...\n")
   
   dat <- lobster
   
   # --- Helper functions ---
   ff_BG <- function(Linf, k, zeta, alpha, beta, Xi, Ti, Li) {
     if (Linf <= max(Li) + 1e-8) return(-1e12)
-    log_prior <- (alpha - 1)*log(Linf) - (Linf/beta) -
-      alpha*log(beta) - lgamma(alpha)
+    log_prior <- (alpha - 1) * log(Linf) - (Linf / beta) -
+      alpha * log(beta) - lgamma(alpha)
     out <- log_prior
     for (j in seq_along(Xi)) {
       denom <- Linf - Li[j]
@@ -79,7 +78,7 @@ test_table2_bg <- function() {
   
   # --- Male subset ---
   dat_male <- dat[dat$SEX == 2, ]
-  init_theta_BG_male <- c(k=0.1, zeta=4, alpha=10, beta=17)
+  init_theta_BG_male <- c(0.1, 4, 10, 17)
   
   res_male_BG <- optim(
     par     = init_theta_BG_male,
@@ -112,6 +111,7 @@ test_table2_bg <- function() {
   # --- Save to results/tables ---
   if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
   write.csv(table2_results, "results/tables/table2_bg_model.csv", row.names = FALSE)
-    
+  
+  
   invisible(table2_results)
 }
