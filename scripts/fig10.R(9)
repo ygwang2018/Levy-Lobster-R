@@ -1,6 +1,3 @@
-###############################################################################
-# 1. Lognormal parameter converter for Linf random-effects
-###############################################################################
 ln_params <- function(mean, sd) {
   var <- sd^2
   meanlog <- log(mean^2 / sqrt(var + mean^2))
@@ -9,9 +6,6 @@ ln_params <- function(mean, sd) {
 }
 
 
-###############################################################################
-# 2. Growth Simulator for von Bertalanffy + MI (Beta) + IP (Gamma GLM)
-###############################################################################
 simulate_growth_A <- function(n, k, zeta, Linf_type, Linf_par, glm_int) {
 
   out <- vector("list", n)
@@ -107,12 +101,8 @@ plot_panel_A <- function(sim, k, Linf, mainlab) {
 }
 
 
-###############################################################################
-# 4. Full Figure 10 Function (Self-contained)
-###############################################################################
 test_fig10 <- function() {
 
-  if (!"lobster" %in% ls()) stop("Lobster dataset missing.")
 
   # SEX coding: 1 = Female, 2 = Male
   dat_f <- subset(lobster, SEX == 1)
