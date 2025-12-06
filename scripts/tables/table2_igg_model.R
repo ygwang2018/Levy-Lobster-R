@@ -50,7 +50,8 @@
   
   # --- Female subset ---
   dat_f <- subset(dat, SEX == 1)
-  MinLinf_f <- max(dat_f$PL) + 0.1; MaxLinf_f <- MinLinf_f + 80
+  MinLinf_f <- 190
+    MaxLinf_f <- 230
   start_f <- c(lambda=0.1, k=0.2, alpha=5, beta=0.05)
   fit_f <- optim(start_f, LL, dat=dat_f, MinLinf=MinLinf_f, MaxLinf=MaxLinf_f,
                  method="L-BFGS-B", lower=c(0.01,0.01,0.10,0.01), upper=c(1,0.5,10,100),
