@@ -62,7 +62,8 @@
   
   # --- Male subset ---
   dat_m <- subset(dat, SEX == 2)
-  MinLinf_m <- max(dat_m$PL) + 0.1; MaxLinf_m <- MinLinf_m + 80
+  MinLinf_m <- 190 
+    MaxLinf_m <- 230
   start_m <- c(lambda=0.1, k=0.2, alpha=5, beta=0.05)
   fit_m <- optim(start_m, LL, dat=dat_m, MinLinf=MinLinf_m, MaxLinf=MaxLinf_m,
                  method="L-BFGS-B", lower=c(0.01,0.01,0.10,0.01), upper=c(1,0.5,10,100),
