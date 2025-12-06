@@ -62,7 +62,22 @@ git clone https://github.com/ygwang2018/Levy-Lobster-R.git
 cd Levy-Lobster-R
 
 ## Install required R packages:
-install.packages(c("tidyverse", "ggplot2", "dplyr"))
+Before running any scripts, make sure the following R packages are installed:
+
+- **dplyr** – data manipulation (filtering, grouping, joins)
+- **ggplot2** – plotting and figure generation (used in `scripts/plots/`)
+- **MASS** – additional statistical functions (Gamma GLM support)
+- **stats** – base R package (provides `glm`, `optim`, distributions)
+- **utils** – base R package (provides `write.csv`, etc.)
+- **graphics / grDevices** – base R packages (plotting functions)
+
+You can install the non‑base packages with:
+
+install.packages(c(
+  "dplyr",
+  "ggplot2",
+  "MASS"
+))
 
 ## Run the main analysis:
 source("scripts/main_analysis.R")
