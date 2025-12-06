@@ -1,268 +1,86 @@
-# BG Model
-
-dat<-lobster
-
-ff_BG <- function(Linf, k, zeta, alpha, beta, Xi, Ti, Li) {
+test_table2_bg <- function() {
   
-  # Prior: Gamma(shape = alpha, scale = beta)
-  if (Linf <= max(Li) + 1e-8) return(-1e12)
+  dat <- lobster
   
-  log_prior <- (alpha - 1)*log(Linf) - (Linf/beta) -
-    alpha*log(beta) - lgamma(alpha)
-  
-  out <- log_prior     # prior only ONCE
-  
-  for (j in seq_along(Xi)) {
-    
-    denom <- Linf - Li[j]
-    if (denom <= 1e-12) return(-1e12)
-    
-    x <- Xi[j] / denom
-    if (x <= 1e-12 || x >= 1 - 1e-12) return(-1e12)
-    
-    a <- (1 - exp(-k * Ti[j])) * (zeta - 1)
-    b <- exp(-k * Ti[j]) * (zeta - 1)
-    if (a <= 0 || b <= 0) return(-1e12)
-    
-    out <- out +
-      dbeta(x, a, b, log = TRUE) -
-      log(denom)
+  ff_BG <- function(Linf, k, zeta, alpha, beta, Xi, Ti, Li) {
+    if (Linf <= max(Li) + 1e-8) return(-1e12)
+    log_prior <- (alpha - 1)*log(Linf) - (Linf/beta) -
+      alpha*log(beta) - lgamma(alpha)
+    out <- log_prior
+    for (j in seq_along(Xi)) {
+      denom <- Linf - Li[j]
+      if (denom <= 1e-12) return(-1e12)
+      x <- Xi[j] / denom
+      if (x <= 1e-12 || x >= 1 - 1e-12) return(-1e12)
+      a <- (1 - exp(-k * Ti[j])) * (zeta - 1)
+      b <- exp(-k * Ti[j]) * (zeta - 1)
+      if (a <= 0 || b <= 0) return(-1e12)
+      out <- out + dbeta(x, a, b, log = TRUE) - log(denom)
+    }
+    out
   }
   
-  return(out)
-}
-
-kernel_BG <- function(Linf, Mi, k, zeta, alpha, beta, Xi, Ti, Li) {
-  val <- ff_BG(Linf, k, zeta, alpha, beta, Xi, Ti, Li)
-  exp(val - Mi)
-}
-
-safe_integrate <- function(fun, lower, upper, n=100) {
-  xs <- seq(lower, upper, length.out=n)
-  vals <- sapply(xs, fun)
-  dx <- (upper - lower)/(n-1)
-  sum(vals) * dx
-}
-
-LL_BG <- function(theta, dat, MinLinf, MaxLinf) {
-  
-  k     <- theta[1]
-  zeta  <- theta[2]
-  alpha <- theta[3]
-  beta  <- theta[4]
-  
-  if (k <= 0 || zeta <= 1.01 || alpha <= 0 || beta <= 0)
-    return(1e12)
-  
-  LLtot <- 0
-  
-  for (id in unique(dat$LOBSTER)) {
-    
-    dati <- subset(dat, LOBSTER == id)
-    
-    Xi <- dati$INC
-    Li <- dati$PL
-    Ti <- dati$INT / 365.25
-    
-    # mode of joint density
-    Mi <- optimize(
-      function(Ls) ff_BG(Ls, k, zeta, alpha, beta, Xi, Ti, Li),
-      interval = c(MinLinf, MaxLinf),
-      maximum = TRUE
-    )$objective
-    
-    val <- safe_integrate(
-      function(Ls)
-        kernel_BG(Ls, Mi, k, zeta, alpha, beta, Xi, Ti, Li),
-      MinLinf, MaxLinf
-    )
-    
-    if (!is.finite(val) || val <= 0)
-      return(1e12)
-    
-    LLtot <- LLtot + log(val) + Mi
+  kernel_BG <- function(Linf, Mi, k, zeta, alpha, beta, Xi, Ti, Li) {
+    val <- ff_BG(Linf, k, zeta, alpha, beta, Xi, Ti, Li)
+    exp(val - Mi)
   }
   
-  return(-LLtot)
+  safe_integrate <- function(fun, lower, upper, n=300) {
+    xs <- seq(lower, upper, length.out=n)
+    vals <- sapply(xs, function(x) ifelse(is.finite(fun(x)), fun(x), 0))
+    dx <- (upper - lower)/(n-1)
+    sum(vals) * dx
+  }
+  
+  LL_BG <- function(theta, dat, MinLinf, MaxLinf) {
+    k     <- theta[1]; zeta <- theta[2]; alpha <- theta[3]; beta <- theta[4]
+    if (k <= 0 || zeta <= 1.01 || alpha <= 0 || beta <= 0) return(1e12)
+    LLtot <- 0
+    for (id in unique(dat$LOBSTER)) {
+      dati <- subset(dat, LOBSTER == id)
+      Xi <- dati$INC; Li <- dati$PL; Ti <- dati$INT / 365.25
+      Mi <- optimize(function(Ls) ff_BG(Ls, k, zeta, alpha, beta, Xi, Ti, Li),
+                     interval=c(MinLinf, MaxLinf), maximum=TRUE)$objective
+      val <- safe_integrate(function(Ls) kernel_BG(Ls, Mi, k, zeta, alpha, beta, Xi, Ti, Li),
+                            MinLinf, MaxLinf)
+      if (!is.finite(val) || val <= 0) return(1e12)
+      LLtot <- LLtot + log(val) + Mi
+    }
+    -LLtot
+  }
+  
+  # --- Female subset ---
+  dat_f <- subset(dat, SEX == 1)
+  MinLinf <- 180; MaxLinf <- 200
+  init_f <- c(k=0.1, zeta=4, alpha=170, beta=1.0)
+  res_f <- optim(init_f, LL_BG, dat=dat_f, MinLinf=MinLinf, MaxLinf=MaxLinf,
+                 method="L-BFGS-B", lower=c(0.01,1.02,1e-4,1e-4),
+                 upper=c(2,200,500,20), control=list(maxit=1500))
+  val_f <- res_f$par; AIC_f <- 2*res_f$value + 2*length(val_f)
+  Linf_f <- val_f[3]*val_f[4]
+  
+  # --- Male subset ---
+  dat_m <- subset(dat, SEX == 2)
+  init_m <- c(0.1,4,10,17)
+  res_m <- optim(init_m, LL_BG, dat=dat_m, MinLinf=MinLinf, MaxLinf=MaxLinf,
+                 method="L-BFGS-B", lower=c(0.01,0.1,1,1),
+                 upper=c(1,100,500,50), control=list(maxit=5000))
+  val_m <- res_m$par; AIC_m <- 2*res_m$value + 2*length(val_m)
+  Linf_m <- val_m[3]*val_m[4]
+  
+  # --- Combine results ---
+  table2_results <- data.frame(
+    Sex    = c("Female","Male"),
+    k      = c(val_f[1], val_m[1]),
+    zeta   = c(val_f[2], val_m[2]),
+    alpha  = c(val_f[3], val_m[3]),
+    beta   = c(val_f[4], val_m[4]),
+    E_Linf = c(Linf_f, Linf_m),
+    AIC    = c(AIC_f, AIC_m)
+  )
+  
+  if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
+  write.csv(table2_results, "results/tables/table2_bg_model.csv", row.names = FALSE)
+  
+  invisible(table2_results)
 }
-
-dat_female <- dat[dat$SEX == 1, ]
-MinLinf <- 180
-MaxLinf <- 200
-
-init_theta_BG <- c(k=0.1, zeta=4, alpha=170, beta=1.0)  # mean(L∞)=170
-
-res_female_BG <- optim(
-  par     = init_theta_BG,
-  fn      = LL_BG,
-  dat     = dat_female,
-  MinLinf = MinLinf,
-  MaxLinf = MaxLinf,
-  method  = "L-BFGS-B",
-  lower   = c(0.01, 1.02, 1e-4, 1e-4),
-  upper   = c(2,    200,  500,  20),
-  control = list(maxit = 1500, trace = 1)
-)
-
-val_female_BG <- res_female_BG$par
-negLL         <- res_female_BG$value
-p             <- length(val_female_BG)
-AIC_female_BG <- 2*negLL + 2*p
-
-Linf_female_BG <- val_female_BG[3] * val_female_BG[4]
-
-print(" Female ")
-print(val_female_BG)
-print(paste("AIC:", AIC_female_BG))
-print(paste("E[Linf] =", Linf_female_BG))
-
-
-#   CI for FEMALE BG MODEL
-
-if (!exists("res_female_BG")) stop("res_female_BG not found.")
-if (!exists("dat_female"))   stop("dat_female not found.")
-
-par_hat_f <- res_female_BG$par
-
-H_f <- optimHess(
-  par = par_hat_f,
-  fn  = LL_BG,
-  dat = dat_female,
-  MinLinf = MinLinf,
-  MaxLinf = MaxLinf
-)
-
-cov_f <- solve(H_f)
-se_f <- sqrt(diag(cov_f))
-
-# ---- Parameter CIs ----
-CI_female_params <- cbind(
-  par_hat_f - 1.96*se_f,
-  par_hat_f + 1.96*se_f
-)
-rownames(CI_female_params) <- c("k", "zeta", "alpha", "beta")
-colnames(CI_female_params) <- c("Lower 95%", "Upper 95%")
-
-CI_female_params
-
-alpha_f <- par_hat_f[3]
-beta_f  <- par_hat_f[4]
-
-Linf_f <- alpha_f * beta_f   # mean Linf
-
-# Gradient for delta method
-grad_f <- c(0, 0,
-            beta_f,     # d(mu)/d(alpha)
-            alpha_f)    # d(mu)/d(beta)
-
-var_Linf_f <- t(grad_f) %*% cov_f %*% grad_f
-se_Linf_f  <- sqrt(var_Linf_f)
-
-CI_female_Linf <- c(
-  Linf_f - 1.96 * se_Linf_f,
-  Linf_f + 1.96 * se_Linf_f
-)
-names(CI_female_Linf) <- c("Lower 95%", "Upper 95%")
-
-CI_female_Linf
-
-##################################################
-# Male
-dat <- lobster
-dat_male <- dat[dat$SEX == 2, ]
-MinLinf <- 180
-MaxLinf <- 200
-init_theta_BG_male <- c(0.1, 4, 10, 17)  # k, zeta, alpha, beta => Linf ≈ 170
-
-res_male_BG <- optim(
-  init_theta_BG_male, LL_BG, dat = dat_male,
-  MinLinf = MinLinf, MaxLinf = MaxLinf,
-  lower = c(0.01, 0.1, 1, 1),
-  upper = c(1, 100, 500, 50),
-  method = "L-BFGS-B",
-  control = list(maxit = 5000, trace = 1)
-)
-
-val_male_BG <- res_male_BG$par
-p<-length(val_male_BG)
-logLik <- -res_male_BG$value
-AIC_male_BG <- (2 * p) - (2 * logLik)
-Linf_male_BG <- val_male_BG[3] * val_male_BG[4]
-AIC_male_BG
-Linf_male_BG
-val_male_BG[1]
-
-#=== Male  ======
-print(paste("Convergence:", res_male_BG$convergence == 0))
-print(paste("AIC:", AIC_male_BG))
-print(paste("Estimated Linf (mean):", Linf_male_BG))
-print(paste("Parameters: k =", val_male_BG[1], ", zeta =", val_male_BG[2], 
-            ", alpha =", val_male_BG[3], ", beta =", val_male_BG[4]))
-
-#   CI for MALE BG MODEL
-
-if (!exists("res_male_BG")) stop("res_male_BG not found.")
-if (!exists("dat_male"))    stop("dat_male not found.")
-
-par_hat_m <- res_male_BG$par
-
-H_m <- optimHess(
-  par = par_hat_m,
-  fn  = LL_BG,
-  dat = dat_male,
-  MinLinf = MinLinf,
-  MaxLinf = MaxLinf
-)
-
-cov_m <- solve(H_m)
-se_m <- sqrt(diag(cov_m))
-
-CI_male_params <- cbind(
-  par_hat_m - 1.96*se_m,
-  par_hat_m + 1.96*se_m
-)
-rownames(CI_male_params) <- c("k", "zeta", "alpha", "beta")
-colnames(CI_male_params) <- c("Lower 95%", "Upper 95%")
-
-CI_male_params
-
-alpha_m <- par_hat_m[3]
-beta_m  <- par_hat_m[4]
-
-Linf_m <- alpha_m * beta_m
-
-grad_m <- c(0, 0,
-            beta_m,
-            alpha_m)
-
-var_Linf_m <- t(grad_m) %*% cov_m %*% grad_m
-se_Linf_m  <- sqrt(var_Linf_m)
-
-CI_male_Linf <- c(
-  Linf_m - 1.96 * se_Linf_m,
-  Linf_m + 1.96 * se_Linf_m
-)
-names(CI_male_Linf) <- c("Lower 95%", "Upper 95%")
-
-CI_male_Linf
-
-# Collect results from female and male fits
-table_results <- data.frame(
-  Sex    = c("Female", "Male"),
-  k      = c(val_female_BG[1], val_male_BG[1]),
-  zeta   = c(val_female_BG[2], val_male_BG[2]),
-  alpha  = c(val_female_BG[3], val_male_BG[3]),
-  beta   = c(val_female_BG[4], val_male_BG[4]),
-  E_Linf = c(Linf_female_BG, Linf_male_BG),
-  AIC    = c(AIC_female_BG, AIC_male_BG),
-  L95    = c(CI_female_Linf[1], CI_male_Linf[1]),
-  U95    = c(CI_female_Linf[2], CI_male_Linf[2])
-)
-
-# Optional rounding for presentation
-table_results[] <- lapply(table_results, function(x) if(is.numeric(x)) round(x, 4) else x)
-
-# Save to results/tables
-write.csv(table_results,
-          "results/tables/table2_bg_model.csv",
-          row.names = FALSE)
