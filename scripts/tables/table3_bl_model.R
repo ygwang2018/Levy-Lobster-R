@@ -8,7 +8,7 @@ test_table3_bl <- function() {
     max(vals[is.finite(vals)])
   }
 
-  safe_integrate <- function(fun, lower, upper, n = 300) {
+  safe_integrate <- function(fun, lower, upper, n = 100) {
     xs <- seq(lower, upper, length.out = n)
     vals <- sapply(xs, function(x) {
       v <- fun(x)
