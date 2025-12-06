@@ -80,7 +80,7 @@ test_table3_bg <- function() {
   )
   
   if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
-  write.csv(table2_results, "results/tables/table2_bg_model.csv", row.names = FALSE)
+  write.csv(table2_results, "results/tables/table3_bg_model.csv", row.names = FALSE)
   
   invisible(table2_results)
 }
