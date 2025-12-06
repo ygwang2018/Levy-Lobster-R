@@ -1,4 +1,4 @@
-test_table2_ig <- function() {
+test_table2_igf <- function() {
   
   dat <- lobster
   
@@ -58,7 +58,7 @@ test_table2_ig <- function() {
   
   # --- Save to results/tables ---
   if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
-  write.csv(table2_results, "results/tables/table2_ig_model.csv", row.names = FALSE)
+  write.csv(table2_results, "results/tables/table2_igf.csv", row.names = FALSE)
     
   invisible(table2_results)
 }
