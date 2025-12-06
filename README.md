@@ -17,17 +17,40 @@ This repository is designed for researchers, students, and data scientists inter
 ## Repository Structure
 Levy-Lobster-R/
 ├── scripts/
-│   ├── lobster_growth.R
-│   ├── mcmc_simulation.R
-│   ├── profile_likelihood_ci.R
-│   └── obs_vs_predicted_ip.R
+│   ├── fig4.R
+│   ├── fig5.R
+│   ├── fig7.R
+│   └── fig9.R
+│
 ├── scripts/plots/
-│   ├── fig2.R … fig10.R
+│   ├── fig1.R
+│   ├── fig2.R
+│   ├── fig3.R
+│   ├── fig6.R
+│   └── fig8.R
+│
 ├── scripts/tables/
-│   ├── table2_bg_model.R … table6_joint_models.R
+│   ├── table2_bg_model.R
+│   ├── table2_bl_model.R
+│   ├── table2_gg_model.R
+│   ├── table2_gl_model.R
+│   ├── table2_bf.R
+│   ├── table2_gf.R
+│   ├── table2_igf.R
+│   ├── table3_bg_model.R
+│   ├── table3_bl_model.R
+│   ├── table4.R
+│   ├── table5.R
+│   ├── table6_independent_model.R
+│   └── table6_joint_models.R
+│
 ├── data/
 │   └── lobster.csv
+│
 ├── results/
+│   ├── tables/
+│   └── plots/
+│
 └── README.md
 
 
