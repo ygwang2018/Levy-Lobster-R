@@ -1,7 +1,6 @@
 library(dplyr)
 
-test_table2betafix <- function() {
-  cat("Running test for table2...\n")
+test_table2bf <- function() {
   
   dat <- lobster
   
@@ -53,7 +52,7 @@ test_table2betafix <- function() {
   
   # Save to results/tables
   if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
-  write.csv(table2_results, "results/tables/table2_beta_linf_fixed.csv", row.names = FALSE)
+  write.csv(table2_results, "results/tables/table2_bf.csv", row.names = FALSE)
     
   invisible(table2_results)
 }
