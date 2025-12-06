@@ -1,6 +1,6 @@
 library(dplyr)
 
-test_table2bf <- function() {
+test_table2_bf <- function() {
   
   dat <- lobster
   
