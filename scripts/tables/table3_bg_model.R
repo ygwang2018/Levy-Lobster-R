@@ -1,4 +1,4 @@
-test_table2_bg <- function() {
+test_table3_bg <- function() {
   
   dat <- lobster
   
