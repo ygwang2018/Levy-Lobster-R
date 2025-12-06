@@ -1,4 +1,4 @@
-test_table2_gamfix <- function() {
+test_table2_gf <- function() {
   cat("Running test for table2 (Gamma–Linf fixed model)...\n")
   
   dat <- lobster
@@ -65,7 +65,7 @@ test_table2_gamfix <- function() {
   
   # --- Save to results/tables ---
   if (!dir.exists("results/tables")) dir.create("results/tables", recursive = TRUE)
-  write.csv(table2_results, "results/tables/table2_gamma_linf_fixed.csv", row.names = FALSE)
+  write.csv(table2_results, "results/tables/table2_gf.csv", row.names = FALSE)
     
   invisible(table2_results)
 }
