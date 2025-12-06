@@ -1,4 +1,4 @@
-test_table6 <- function() {
+test_table6ind <- function() {
   data <- lobster
   
   independent_likelihood_kMI <- function(params, data) {
