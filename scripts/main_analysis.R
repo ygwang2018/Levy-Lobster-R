@@ -1,10 +1,10 @@
 # Main analysis orchestrator
 # This script sources all table and analysis scripts
 
+source("scripts/fig3.R")
 source("scripts/fig4.R")
-source("scripts/fig5.R")
-source("scripts/fig8.R")
-source("scripts/fig10.R")
+source("scripts/fig7.R")
+source("scripts/fig9.R")
 
 # Tables
 source("scripts/tables/table2_bg_model.R")
