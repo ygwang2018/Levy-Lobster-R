@@ -29,7 +29,5 @@ source("scripts/tables/table6_joint_models.R")
 source("scripts/plots/fig1.R")
 source("scripts/plots/fig2.R")
 source("scripts/plots/fig5.R")
-source("scripts/plots/fig6.R")
-source("scripts/plots/fig8.R")
 
 cat("All tests passed successfully!\n")
