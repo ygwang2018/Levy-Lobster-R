@@ -2,7 +2,7 @@ library(splines)
 library(dplyr)
 library(ggplot2)
 
-test_fig7 <- function() {
+test_fig6 <- function() {
   cat("Running test for fig8...\n")
   
   # Ensure SEX is labelled
@@ -43,7 +43,7 @@ test_fig7 <- function() {
   
   # Save plot
   if (!dir.exists("results/figures")) dir.create("results/figures", recursive = TRUE)
-  ggsave("results/figures/fig7.png", plot = p, width = 8, height = 5, dpi = 300)
+  ggsave("results/figures/fig6.png", plot = p, width = 8, height = 5, dpi = 300)
   
   invisible(p)
 }
