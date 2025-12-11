@@ -3,8 +3,8 @@
 
 source("scripts/fig3.R")
 source("scripts/fig4.R")
+source("scripts/fig6.R")
 source("scripts/fig7.R")
-source("scripts/fig9.R")
 
 # Tables
 source("scripts/tables/table2_bg_model.R")
