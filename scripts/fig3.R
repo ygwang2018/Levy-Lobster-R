@@ -82,4 +82,7 @@ cor_df <- df %>%
   ggsave("results/figures/fig3.png", p, width = 8, height = 5, dpi = 300)
 
   return(p)
+  print(p)
 }
+
+test_fig3()
