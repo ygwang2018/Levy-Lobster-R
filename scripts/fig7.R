@@ -88,7 +88,7 @@ plot_panel <- function(df, k, Linf_mean, title_expr) {
 
 # 4. Main figure function
 
-test_fig9 <- function() {
+test_fig7 <- function() {
 
   set.seed(123)
 
@@ -120,7 +120,7 @@ test_fig9 <- function() {
 
   Linf_m_fixed <- 228.04
 
-  png("results/figures/fig9.png", width = 1200, height = 900, res = 150)
+  png("results/figures/fig7.png", width = 1200, height = 900, res = 150)
 
   par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
 
