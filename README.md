@@ -17,17 +17,15 @@ This repository is designed for researchers, students, and data scientists inter
 ## Repository Structure
 Levy-Lobster-R/
 ├── scripts/
+│   ├── fig3.R
 │   ├── fig4.R
-│   ├── fig5.R
-│   ├── fig7.R
-│   └── fig9.R
+│   ├── fig6.R
+│   └── fig7.R
 │
 ├── scripts/plots/
 │   ├── fig1.R
 │   ├── fig2.R
-│   ├── fig3.R
-│   ├── fig6.R
-│   └── fig8.R
+│   ├── fig5.R
 │
 ├── scripts/tables/
 │   ├── table2_bg_model.R
@@ -37,12 +35,12 @@ Levy-Lobster-R/
 │   ├── table2_bf.R
 │   ├── table2_gf.R
 │   ├── table2_igf.R
-│   ├── table3_bg_model.R
-│   ├── table3_bl_model.R
+│   ├── supplementary_bg_model.R
+│   ├── supplementary_bl_model.R
+│   ├── table3.R
 │   ├── table4.R
-│   ├── table5.R
-│   ├── table6_independent_model.R
-│   └── table6_joint_models.R
+│   ├── table5_independent_model.R
+│   └── table5_joint_models.R
 │
 ├── data/
 │   └── lobster.csv
