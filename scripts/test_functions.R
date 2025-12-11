@@ -7,8 +7,8 @@ stopifnot(file.exists("data/lobster.csv"))
 # ✅ Check that core analysis scripts can be sourced
 source("scripts/fig3.R")
 source("scripts/fig4.R")
+source("scripts/fig6.R")
 source("scripts/fig7.R")
-source("scripts/fig9.R")
 
 # ✅ Check that table scripts run without error
 source("scripts/tables/table2_bf.R")
