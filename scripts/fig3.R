@@ -43,7 +43,7 @@ cor_df <- df %>%
   summarise(
     r = round(cor(MI_res, IP_res), 2),
     x = quantile(MI_res, 0.80),   # 80% of x-range
-    y = quantile(IP_res, 0.90)    # 90% of y-range
+    y = quantile(IP_res, 1.00)    # 90% of y-range
   )
  
   # Plot
