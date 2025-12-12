@@ -5,10 +5,10 @@
 stopifnot(file.exists("data/lobster.csv"))
 
 # ✅ Check that core analysis scripts can be sourced
+source("scripts/fig1.R")
 source("scripts/fig3.R")
 source("scripts/fig4.R")
-source("scripts/fig6.R")
-source("scripts/fig7.R")
+source("scripts/fig5.R")
 
 # ✅ Check that table scripts run without error
 source("scripts/tables/table2_bf.R")
@@ -24,10 +24,5 @@ source("scripts/tables/table3.R")
 source("scripts/tables/table4.R")
 source("scripts/tables/table5_independent_model.R")
 source("scripts/tables/table5_joint_models.R")
-
-# ✅ Check that plot scripts run without error
-source("scripts/plots/fig1.R")
-source("scripts/plots/fig2.R")
-source("scripts/plots/fig5.R")
 
 cat("All tests passed successfully!\n")
