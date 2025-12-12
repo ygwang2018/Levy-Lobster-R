@@ -1,7 +1,6 @@
 test_fig4 <- function() {
 
-  cat("Running test for fig4...\n")
-
+ 
   # convert date
   lobster$Date <- as.Date(lobster$Date, "%d/%m/%Y")
 
