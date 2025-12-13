@@ -756,141 +756,170 @@ simulate_gamma()
 
 ################Independent model########################
 test_MIIP_ind <- function(
-    Linf_f = max(subset(lobster, SEX == 1)$CL) + 10,
-    Linf_m = max(subset(lobster, SEX == 2)$CL) + 30
+        Linf_f = max(subset(lobster, SEX == 1)$CL) + 10,
+        Linf_m = max(subset(lobster, SEX == 2)$CL) + 30
 ) {
-  
-  library(dplyr)
-  
-  dat <- lobster %>%
-    arrange(LOBSTER, START) %>%
-    group_by(LOBSTER) %>%
-    mutate(Tminus = lag(INT)) %>%
-    ungroup() %>%
-    filter(!is.na(Tminus), INT > 0, INC > 0)
-  
-  ## scale T^- by sex (IP component)
-  dat <- dat %>%
-    group_by(SEX) %>%
-    mutate(Tminus_s = as.numeric(scale(Tminus))) %>%
-    ungroup()
-  
-  df_f <- subset(dat, SEX == 1)
-  df_m <- subset(dat, SEX == 2)
-  
-  MIIP_ll <- function(params, data, Linf_fixed) {
     
-    ## validity check once
-    if (Linf_fixed <= max(data$PL)) return(1e10)
+    library(dplyr)
     
-    k      <- params["k"]       # per-day rate
-    lambda <- params["lambda"]
-    beta0  <- params["beta0"]
-    beta1  <- params["beta1"]
-    beta2  <- params["beta2"]
-    sigma  <- params["sigma"]
+    dat <- lobster %>%
+        arrange(LOBSTER, START) %>%
+        group_by(LOBSTER) %>%
+        mutate(Tminus = lag(INT)) %>%
+        ungroup() %>%
+        filter(!is.na(Tminus), INT > 0, INC > 0)
     
-    eps <- 1e-8
-    loglik <- 0
+    dat <- dat %>%
+        group_by(SEX) %>%
+        mutate(Tminus_s = as.numeric(scale(Tminus))) %>%
+        ungroup()
     
-    for (i in seq_len(nrow(data))) {
-      
-      ## ---------- MI (Beta) ----------
-      Lp <- data$PL[i]
-      I  <- data$INC[i]
-      T  <- data$INT[i]          # *** DAYS (FIX) ***
-      
-      mu <- 1 - exp(-k * T)
-      mu <- min(max(mu, eps), 1 - eps)
-      
-      x <- I / (Linf_fixed - Lp)
-      x <- min(max(x, eps), 1 - eps)
-      
-      a <- lambda * mu
-      b <- lambda * (1 - mu)
-      
-      loglik <- loglik + dbeta(x, a, b, log = TRUE)
-      
-      ## ---------- IP (Lognormal) ----------
-      mu_T <- beta0 +
-        beta1 * Lp +
-        beta2 * data$Tminus_s[i]
-      
-      loglik <- loglik +
-        dlnorm(data$INT[i],
-               meanlog = mu_T,
-               sdlog   = sigma,
-               log = TRUE)
+    df_f <- subset(dat, SEX == 1)
+    df_m <- subset(dat, SEX == 2)
+    
+    BL_ll <- function(par, data, Linf_fixed) {
+        
+        k    <- par["k"]
+        zeta <- par["zeta"]
+        
+        eps <- 1e-8
+        ll  <- 0
+        
+        for (i in seq_len(nrow(data))) {
+            
+            Lp <- data$PL[i]
+            I  <- data$INC[i]
+            T  <- data$INT[i] / 365
+            
+            mu <- 1 - exp(-k * T)
+            mu <- min(max(mu, eps), 1 - eps)
+            
+            x <- I / (Linf_fixed - Lp)
+            x <- min(max(x, eps), 1 - eps)
+            
+            a <- (zeta - 1) * mu
+            b <- (zeta - 1) * (1 - mu)
+            
+            if (a <= 0 || b <= 0) return(1e10)
+            
+            ll <- ll + dbeta(x, a, b, log = TRUE)
+        }
+        
+        -ll
     }
     
-    negLL <- -loglik
-    if (!is.finite(negLL)) 1e10 else negLL
-  }
-  
-  init <- c(
-    k      = 0.01,     # per day
-    lambda = 30,
-    beta0  = 1.5,
-    beta1  = 0.01,
-    beta2  = 0.2,
-    sigma  = 0.3
-  )
-  
-  lower <- c(
-    k      = 1e-4,
-    lambda = 1,
-    beta0  = -10,
-    beta1  = -0.05,
-    beta2  = -5,
-    sigma  = 0.05
-  )
-  
-  upper <- c(
-    k      = 0.1,
-    lambda = 300,
-    beta0  = 10,
-    beta1  = 0.05,
-    beta2  = 5,
-    sigma  = 2.0
-  )
-  
-  fit_f <- optim(
-    init, MIIP_ll,
-    data = df_f, Linf_fixed = Linf_f,
-    method = "L-BFGS-B",
-    lower = lower, upper = upper,
-    control = list(maxit = 3000)
-  )
-  
-  fit_m <- optim(
-    init, MIIP_ll,
-    data = df_m, Linf_fixed = Linf_m,
-    method = "L-BFGS-B",
-    lower = lower, upper = upper,
-    control = list(maxit = 3000)
-  )
-  
-  results <- data.frame(
-    Sex = c("Female","Male"),
-    Linf = c(Linf_f, Linf_m),
-    k = c(fit_f$par["k"], fit_m$par["k"]),       # per-day
-    lambda = c(fit_f$par["lambda"], fit_m$par["lambda"]),
-    beta0 = c(fit_f$par["beta0"], fit_m$par["beta0"]),
-    beta1 = c(fit_f$par["beta1"], fit_m$par["beta1"]),
-    beta2 = c(fit_f$par["beta2"], fit_m$par["beta2"]),
-    sigma = c(fit_f$par["sigma"], fit_m$par["sigma"]),
-    NegLL = c(fit_f$value, fit_m$value),
-    AIC = c(
-      2 * fit_f$value + 2 * length(init),
-      2 * fit_m$value + 2 * length(init)
-    ),
-    Converged = c(fit_f$convergence == 0,
-                  fit_m$convergence == 0)
-  )
-  
-  print(results)
-  invisible(results)
+    fit_BL_f <- optim(
+        c(k = 0.3, zeta = 50), BL_ll,
+        data = df_f, Linf_fixed = Linf_f,
+        method = "L-BFGS-B",
+        lower = c(1e-4, 2),
+        upper = c(0.5, 300)
+    )
+    
+    fit_BL_m <- optim(
+        c(k = 0.3, zeta = 50), BL_ll,
+        data = df_m, Linf_fixed = Linf_m,
+        method = "L-BFGS-B",
+        lower = c(1e-4, 2),
+        upper = c(0.5, 300)
+    )
+    
+    ref_f <- fit_BL_f$par
+    ref_m <- fit_BL_m$par
+    
+        MIIP_ll <- function(par, data, Linf_fixed) {
+        
+        k     <- par["k"]
+        zeta  <- par["zeta"]
+        phi   <- par["phi"]
+        beta0 <- par["beta0"]
+        beta1 <- par["beta1"]
+        beta2 <- par["beta2"]
+        
+        eps <- 1e-8
+        ll  <- 0
+        
+        for (i in seq_len(nrow(data))) {
+            
+            Lp <- data$PL[i]
+            I  <- data$INC[i]
+            T  <- data$INT[i] / 365
+            
+            ## ---- MI: BL ----
+            mu <- 1 - exp(-k * T)
+            mu <- min(max(mu, eps), 1 - eps)
+            
+            x <- I / (Linf_fixed - Lp)
+            x <- min(max(x, eps), 1 - eps)
+            
+            a <- (zeta - 1) * mu
+            b <- (zeta - 1) * (1 - mu)
+            
+            if (a <= 0 || b <= 0) return(1e10)
+            
+            ll <- ll + dbeta(x, a, b, log = TRUE)
+            
+            ## ---- IP: Gamma ----
+            mu_T <- exp(beta0 +
+                            beta1 * Lp +
+                            beta2 * data$Tminus_s[i])
+            
+            if (mu_T <= 0) return(1e10)
+            
+            ll <- ll + dgamma(
+                data$INT[i],
+                shape = phi,
+                scale = mu_T / phi,
+                log = TRUE
+            )
+        }
+        
+        -ll
+    }
+    
+    init  <- c(k=0.3, zeta=50, phi=5, beta0=1, beta1=0.01, beta2=0.2)
+    lower <- c(1e-4, 2, 0.5, -10, -0.05, -5)
+    upper <- c(0.5, 300, 50, 10, 0.05, 5)
+    
+    fit_f <- optim(
+        init, MIIP_ll,
+        data = df_f, Linf_fixed = Linf_f,
+        method = "L-BFGS-B",
+        lower = lower, upper = upper,
+        hessian = TRUE
+    )
+    
+    fit_m <- optim(
+        init, MIIP_ll,
+        data = df_m, Linf_fixed = Linf_m,
+        method = "L-BFGS-B",
+        lower = lower, upper = upper,
+        hessian = TRUE
+    )
+    
+    SE_f <- sqrt(mean(diag(solve(fit_f$hessian)), na.rm = TRUE))
+    SE_m <- sqrt(mean(diag(solve(fit_m$hessian)), na.rm = TRUE))
+    
+    Bias_f <- sqrt(mean((fit_f$par[c("k","zeta")] - ref_f)^2))
+    Bias_m <- sqrt(mean((fit_m$par[c("k","zeta")] - ref_m)^2))
+    
+    RMSE_f <- sqrt(SE_f^2 + Bias_f^2)
+    RMSE_m <- sqrt(SE_m^2 + Bias_m^2)
+    
+    results <- data.frame(
+        Sex   = c("Female","Male"),
+        Linf  = c(Linf_f, Linf_m),
+        k     = c(fit_f$par["k"], fit_m$par["k"]),
+        SE    = c(SE_f, SE_m),
+        Bias  = c(Bias_f, Bias_m),
+        RMSE  = c(RMSE_f, RMSE_m),
+        NegLL = c(fit_f$value, fit_m$value),
+        Converged = c(
+            fit_f$convergence == 0,
+            fit_m$convergence == 0
+        )
+    )
+    
+    print(results)
+    invisible(results)
 }
-
-#############JOINT ###################################
-
