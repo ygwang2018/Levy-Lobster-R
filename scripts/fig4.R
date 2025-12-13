@@ -3,7 +3,6 @@ library(dplyr)
 library(ggplot2)
 
 test_fig6 <- function() {
-  cat("Running test for fig8...\n")
   
   # Ensure SEX is labelled
   lobster$SEX <- factor(lobster$SEX,
