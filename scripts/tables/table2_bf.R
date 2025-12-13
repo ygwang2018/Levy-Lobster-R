@@ -1,31 +1,34 @@
-library(dplyr)
-
-test_table2_BF <- function() {
+test_table2_bf <- function() {
+    
     
     dat <- lobster
     
-    negLL_BF <- function(par, T, I, L) {
+    
+    LL_BF_fixed <- function(par, Linf, L, I, T) {
         
-        Linf <- par[1]
-        k    <- par[2]
-        zeta <- par[3]
+        k    <- par[1]
+        zeta <- par[2]
         
-        if (k <= 0 || zeta <= 1 || Linf <= max(L) + 1e-6)
+        if (k <= 0 || zeta <= 1)
             return(1e10)
         
         ll <- 0
         
         for (i in seq_along(I)) {
             
-            if (I[i] >= Linf - L[i]) return(1e10)
+            denom <- Linf - L[i]
+            if (denom <= 0 || I[i] >= denom)
+                return(1e10)
             
             alpha <- (1 - exp(-k * T[i])) * (zeta - 1)
             beta  <- exp(-k * T[i]) * (zeta - 1)
             
-            if (alpha <= 0 || beta <= 0) return(1e10)
+            if (alpha <= 0 || beta <= 0)
+                return(1e10)
             
-            x <- I[i] / (Linf - L[i])
-            if (x <= 0 || x >= 1) return(1e10)
+            x <- I[i] / denom
+            if (x <= 0 || x >= 1)
+                return(1e10)
             
             ll <- ll +
                 lgamma(alpha + beta) -
@@ -33,33 +36,32 @@ test_table2_BF <- function() {
                 lgamma(beta) +
                 (alpha - 1) * log(x) +
                 (beta  - 1) * log(1 - x) -
-                log(Linf - L[i])
+                log(denom)
         }
         
         return(-ll)
     }
     
-    fit_BF <- function(df) {
+    fit_BF_fixed <- function(df, Linf, start, lower, upper) {
         
-        T <- df$INT / 365.25
+        T <- df$NINT / 365.25
         I <- df$INC
-        L <- df$PL
-        
-        start <- c(max(L) + 20, 0.15, 20)
+        L <- df$CL
         
         res <- optim(
-            par    = start,
-            fn     = negLL_BF,
-            T      = T,
-            I      = I,
+            par    = start,           # (k, zeta)
+            fn     = LL_BF_fixed,
+            Linf   = Linf,
             L      = L,
+            I      = I,
+            T      = T,
             method = "L-BFGS-B",
-            lower  = c(max(L) + 1, 1e-4, 1 + 1e-4),
-            upper  = c(max(L) + 200, 2, 200)
+            lower  = lower,
+            upper  = upper
         )
         
         logLik <- -res$value
-        p      <- 3                     # Linf, k, zeta
+        p      <- 2                # FIXED Linf
         AIC    <- 2 * p - 2 * logLik
         
         list(
@@ -69,15 +71,33 @@ test_table2_BF <- function() {
         )
     }
     
-    fit_f <- fit_BF(dat %>% filter(SEX == 1))
+    df_f <- dat[dat$SEX == 1, ]
+    Linf_f <- max(df_f$CL) + 10   # fixed choice
     
-    fit_m <- fit_BF(dat %>% filter(SEX == 2))
+    fit_f <- fit_BF_fixed(
+        df    = df_f,
+        Linf  = Linf_f,
+        start = c(0.15, 20),
+        lower = c(1e-4, 1 + 1e-4),
+        upper = c(2.0, 200)
+    )
     
-    table2 <- data.frame(
+    df_m <- dat[dat$SEX == 2, ]
+    Linf_m <- max(df_m$CL) + 50   # fixed choice
+    
+    fit_m <- fit_BF_fixed(
+        df    = df_m,
+        Linf  = Linf_m,
+        start = c(0.15, 20),
+        lower = c(1e-4, 1 + 1e-4),
+        upper = c(2.0, 200)
+    )
+    
+    table2_results <- data.frame(
         Sex    = c("Female", "Male"),
-        Linf   = c(fit_f$par[1], fit_m$par[1]),
-        k      = c(fit_f$par[2], fit_m$par[2]),
-        zeta   = c(fit_f$par[3], fit_m$par[3]),
+        Linf   = c(Linf_f, Linf_m),      # FIXED
+        k      = c(fit_f$par[1], fit_m$par[1]),
+        zeta   = c(fit_f$par[2], fit_m$par[2]),
         logLik = c(fit_f$logLik, fit_m$logLik),
         AIC    = c(fit_f$AIC, fit_m$AIC)
     )
@@ -86,13 +106,11 @@ test_table2_BF <- function() {
         dir.create("results/tables", recursive = TRUE)
     
     write.csv(
-        table2,
-        "results/tables/table2_BF_AIC.csv",
+        table2_results,
+        "results/tables/table2_bf_fixedLinf.csv",
         row.names = FALSE
     )
     
-    return(table2)
+    return(table2_results)
 }
-
-## Run
-test_table2_BF()
+test_table2_bf()
