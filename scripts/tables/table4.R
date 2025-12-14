@@ -392,9 +392,9 @@ simulate_gamma <- function(R = 1000, n_f = 100, n_m = 100) {
                 sd(Linfhat_f)
             ),
             RMSE = c(
-                sqrt(mean((khat_f - ktrue_f)^2)),
-                sqrt(mean((Linfhat_f - Ltrue_f)^2))
-            )
+                sqrt((mean(khat_f - ktrue_f))^2+(sd(khat_f))^2), 
+                sqrt((mean(Linfhat_f - Ltrue_f))^2+(sd(Linfhat_f))^2))
+            
         ),
         data.frame(
             Sex = "Male",
@@ -416,11 +416,11 @@ simulate_gamma <- function(R = 1000, n_f = 100, n_m = 100) {
                 sd(Linfhat_m)
             ),
             RMSE = c(
-                sqrt(mean((khat_m - ktrue_m)^2)),
-                sqrt(mean((Linfhat_m - Ltrue_m)^2))
+                sqrt((mean(khat_m - ktrue_m))^2+(sd(khat_m))^2), 
+                sqrt((mean(Linfhat_m - Ltrue_m))^2+(sd(Linfhat_m))^2))
             )
         )
-    )
+    
     
     return(summary_gamma_sex)
 }
