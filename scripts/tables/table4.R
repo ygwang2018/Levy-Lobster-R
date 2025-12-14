@@ -970,10 +970,229 @@ print(MC_summary(storeM, c(Linf = 210, k = 0.24)))
                       
 ############################# JOINT #####################################################
 
+laplace_logint <- function(f, lo, hi) {
+
+  opt <- try(optimize(function(u) -f(u), c(lo, hi)), silent = TRUE)
+  if (inherits(opt, "try-error")) return(-Inf)
+
+  u0 <- opt$minimum
+  f0 <- f(u0)
+  if (!is.finite(f0)) return(-Inf)
+
+  h <- 1e-4
+  fpp <- (f(u0 + h) - 2 * f0 + f(u0 - h)) / h^2
+  if (!is.finite(fpp) || fpp >= 0) return(-Inf)
+
+  f0 + 0.5 * log(2 * pi) - 0.5 * log(-fpp)
+}
 
 
+simulate_joint_MIIP <- function(
+  n_ind = 80,
+  n_obs = 12,
+  true
+) {
 
+  dat <- vector("list", n_ind * n_obs)
+  idx <- 1
+  id  <- 1
 
+  for (i in seq_len(n_ind)) {
 
-                      
+    Linf_i <- rlnorm(
+      1,
+      meanlog = log(true$Linf_mean) - 0.5 * true$Linf_sdlog^2,
+      sdlog   = true$Linf_sdlog
+    )
 
+    PL <- runif(1, 40, 80)
+
+    for (j in seq_len(n_obs)) {
+
+      ## IP: Gamma
+      mu_T <- true$mu_INT
+      INT  <- rgamma(1, shape = true$phi,
+                     scale = mu_T / true$phi)
+
+      ## MI: BL
+      mu <- 1 - exp(-true$k * INT)
+      mu <- pmin(pmax(mu, 1e-6), 1 - 1e-6)
+
+      a <- (true$zeta - 1) * mu
+      b <- (true$zeta - 1) * (1 - mu)
+
+      x   <- rbeta(1, a, b)
+      INC <- x * (Linf_i - PL)
+
+      dat[[idx]] <- data.frame(
+        LOBSTER = id,
+        PL      = PL,
+        INC     = INC,
+        INT     = INT
+      )
+      idx <- idx + 1
+
+      PL <- PL + INC
+    }
+
+    id <- id + 1
+  }
+
+  do.call(rbind, dat)
+}
+
+## Joint MI–IP likelihood (random Linf)
+
+fit_joint_MIIP <- function(dat) {
+
+  nll <- function(par) {
+
+    k     <- par["k"]
+    zeta  <- par["zeta"]
+    mu_L  <- par["mu_L"]
+    sd_L  <- par["sd_L"]
+    mu_T  <- par["mu_T"]
+    phi   <- par["phi"]
+
+    if (k <= 0 || zeta <= 1 || sd_L <= 0 ||
+        mu_T <= 0 || phi <= 0)
+      return(1e10)
+
+    eps <- 1e-8
+    ll  <- 0
+
+    for (id in unique(dat$LOBSTER)) {
+
+      d <- dat[dat$LOBSTER == id, ]
+      maxPL <- max(d$PL)
+
+      f_u <- function(u) {
+
+        Linf <- exp(u)
+        if (Linf <= maxPL) return(-Inf)
+
+        ll_i <- dnorm(u, mu_L, sd_L, log = TRUE)
+
+        for (j in seq_len(nrow(d))) {
+
+          ## MI: BL
+          mu <- 1 - exp(-k * d$INT[j])
+          mu <- pmin(pmax(mu, eps), 1 - eps)
+
+          denom <- Linf - d$PL[j]
+          if (denom <= eps) return(-Inf)
+
+          x <- d$INC[j] / denom
+          if (x <= eps || x >= 1 - eps) return(-Inf)
+
+          a <- (zeta - 1) * mu
+          b <- (zeta - 1) * (1 - mu)
+
+          ll_i <- ll_i + dbeta(x, a, b, log = TRUE)
+
+          ## IP: Gamma
+          ll_i <- ll_i + dgamma(
+            d$INT[j],
+            shape = phi,
+            scale = mu_T / phi,
+            log = TRUE
+          )
+        }
+
+        ll_i
+      }
+
+      lo <- log(maxPL + 1)
+      hi <- log(maxPL + 3 * exp(mu_L + 2 * sd_L))
+
+      logLi <- laplace_logint(f_u, lo, hi)
+      if (!is.finite(logLi)) return(1e10)
+
+      ll <- ll + logLi
+    }
+
+    -ll
+  }
+
+  init <- c(
+    k     = 0.25,
+    zeta  = 120,
+    mu_L  = log(mean(dat$PL) + 80),
+    sd_L  = 0.08,
+    mu_T  = mean(dat$INT),
+    phi   = 10
+  )
+
+  lower <- c(0.05, 50, log(60), 0.02, 0.2, 1)
+  upper <- c(0.8, 400, log(400), 0.4, 5, 50)
+
+  optim(init, nll, method = "L-BFGS-B",
+        lower = lower, upper = upper,
+        control = list(maxit = 2000))
+}
+
+extract_k_Linf <- function(fit) {
+  c(
+    Linf = exp(fit$par["mu_L"] + 0.5 * fit$par["sd_L"]^2),
+    k    = fit$par["k"]
+  )
+}
+
+##  Monte Carlo 
+
+R <- 500
+
+true_F <- list(
+  Linf_mean = 180,
+  Linf_sdlog = 0.08,
+  k = 0.28,
+  zeta = 120,
+  mu_INT = 1.2,
+  phi = 10
+)
+
+true_M <- list(
+  Linf_mean = 210,
+  Linf_sdlog = 0.08,
+  k = 0.24,
+  zeta = 120,
+  mu_INT = 1.2,
+  phi = 10
+)
+
+storeF <- matrix(NA_real_, R, 2, dimnames = list(NULL, c("Linf","k")))
+storeM <- matrix(NA_real_, R, 2, dimnames = list(NULL, c("Linf","k")))
+
+for (r in seq_len(R)) {
+
+  datF <- simulate_joint_MIIP(true = true_F)
+  datM <- simulate_joint_MIIP(true = true_M)
+
+  fitF <- try(fit_joint_MIIP(datF), silent = TRUE)
+  fitM <- try(fit_joint_MIIP(datM), silent = TRUE)
+
+  if (!inherits(fitF, "try-error") && fitF$convergence == 0)
+    storeF[r, ] <- extract_k_Linf(fitF)
+
+  if (!inherits(fitM, "try-error") && fitM$convergence == 0)
+    storeM[r, ] <- extract_k_Linf(fitM)
+
+  if (r %% 50 == 0)
+    cat("Completed", r, "\n")
+}
+
+MC_summary <- function(est, truth) {
+
+  est <- est[complete.cases(est), , drop = FALSE]
+
+  data.frame(
+    Parameter = colnames(est),
+    Mean  = colMeans(est),
+    SE    = apply(est, 2, sd),
+    Bias  = colMeans(est) - truth[colnames(est)],
+    RMSE  = sqrt(colMeans((est - truth[colnames(est)])^2))
+  )
+}
+
+print(MC_summary(storeF, c(Linf = 180, k = 0.28)))
+print(MC_summary(storeM, c(Linf = 210, k = 0.24)))
