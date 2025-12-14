@@ -965,3 +965,15 @@ MC_summary <- function(est, truth) {
 
 print(MC_summary(storeF, c(Linf = 180, k = 0.28)))
 print(MC_summary(storeM, c(Linf = 210, k = 0.24)))
+
+
+                      
+############################# JOINT #####################################################
+
+
+
+
+
+
+                      
+
