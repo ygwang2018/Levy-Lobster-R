@@ -755,171 +755,213 @@ simulate_gamma()
 
 
 ################Independent model########################
-test_MIIP_ind <- function(
-        Linf_f = max(subset(lobster, SEX == 1)$CL) + 10,
-        Linf_m = max(subset(lobster, SEX == 2)$CL) + 30
-) {
-    
-    library(dplyr)
-    
-    dat <- lobster %>%
-        arrange(LOBSTER, START) %>%
-        group_by(LOBSTER) %>%
-        mutate(Tminus = lag(INT)) %>%
-        ungroup() %>%
-        filter(!is.na(Tminus), INT > 0, INC > 0)
-    
-    dat <- dat %>%
-        group_by(SEX) %>%
-        mutate(Tminus_s = as.numeric(scale(Tminus))) %>%
-        ungroup()
-    
-    df_f <- subset(dat, SEX == 1)
-    df_m <- subset(dat, SEX == 2)
-    
-    BL_ll <- function(par, data, Linf_fixed) {
-        
-        k    <- par["k"]
-        zeta <- par["zeta"]
-        
-        eps <- 1e-8
-        ll  <- 0
-        
-        for (i in seq_len(nrow(data))) {
-            
-            Lp <- data$PL[i]
-            I  <- data$INC[i]
-            T  <- data$INT[i] / 365
-            
-            mu <- 1 - exp(-k * T)
-            mu <- min(max(mu, eps), 1 - eps)
-            
-            x <- I / (Linf_fixed - Lp)
-            x <- min(max(x, eps), 1 - eps)
-            
-            a <- (zeta - 1) * mu
-            b <- (zeta - 1) * (1 - mu)
-            
-            if (a <= 0 || b <= 0) return(1e10)
-            
-            ll <- ll + dbeta(x, a, b, log = TRUE)
-        }
-        
-        -ll
-    }
-    
-    fit_BL_f <- optim(
-        c(k = 0.3, zeta = 50), BL_ll,
-        data = df_f, Linf_fixed = Linf_f,
-        method = "L-BFGS-B",
-        lower = c(1e-4, 2),
-        upper = c(0.5, 300)
-    )
-    
-    fit_BL_m <- optim(
-        c(k = 0.3, zeta = 50), BL_ll,
-        data = df_m, Linf_fixed = Linf_m,
-        method = "L-BFGS-B",
-        lower = c(1e-4, 2),
-        upper = c(0.5, 300)
-    )
-    
-    ref_f <- fit_BL_f$par
-    ref_m <- fit_BL_m$par
-    
-        MIIP_ll <- function(par, data, Linf_fixed) {
-        
-        k     <- par["k"]
-        zeta  <- par["zeta"]
-        phi   <- par["phi"]
-        beta0 <- par["beta0"]
-        beta1 <- par["beta1"]
-        beta2 <- par["beta2"]
-        
-        eps <- 1e-8
-        ll  <- 0
-        
-        for (i in seq_len(nrow(data))) {
-            
-            Lp <- data$PL[i]
-            I  <- data$INC[i]
-            T  <- data$INT[i] / 365
-            
-            ## ---- MI: BL ----
-            mu <- 1 - exp(-k * T)
-            mu <- min(max(mu, eps), 1 - eps)
-            
-            x <- I / (Linf_fixed - Lp)
-            x <- min(max(x, eps), 1 - eps)
-            
-            a <- (zeta - 1) * mu
-            b <- (zeta - 1) * (1 - mu)
-            
-            if (a <= 0 || b <= 0) return(1e10)
-            
-            ll <- ll + dbeta(x, a, b, log = TRUE)
-            
-            ## ---- IP: Gamma ----
-            mu_T <- exp(beta0 +
-                            beta1 * Lp +
-                            beta2 * data$Tminus_s[i])
-            
-            if (mu_T <= 0) return(1e10)
-            
-            ll <- ll + dgamma(
-                data$INT[i],
-                shape = phi,
-                scale = mu_T / phi,
-                log = TRUE
-            )
-        }
-        
-        -ll
-    }
-    
-    init  <- c(k=0.3, zeta=50, phi=5, beta0=1, beta1=0.01, beta2=0.2)
-    lower <- c(1e-4, 2, 0.5, -10, -0.05, -5)
-    upper <- c(0.5, 300, 50, 10, 0.05, 5)
-    
-    fit_f <- optim(
-        init, MIIP_ll,
-        data = df_f, Linf_fixed = Linf_f,
-        method = "L-BFGS-B",
-        lower = lower, upper = upper,
-        hessian = TRUE
-    )
-    
-    fit_m <- optim(
-        init, MIIP_ll,
-        data = df_m, Linf_fixed = Linf_m,
-        method = "L-BFGS-B",
-        lower = lower, upper = upper,
-        hessian = TRUE
-    )
-    
-    SE_f <- sqrt(mean(diag(solve(fit_f$hessian)), na.rm = TRUE))
-    SE_m <- sqrt(mean(diag(solve(fit_m$hessian)), na.rm = TRUE))
-    
-    Bias_f <- sqrt(mean((fit_f$par[c("k","zeta")] - ref_f)^2))
-    Bias_m <- sqrt(mean((fit_m$par[c("k","zeta")] - ref_m)^2))
-    
-    RMSE_f <- sqrt(SE_f^2 + Bias_f^2)
-    RMSE_m <- sqrt(SE_m^2 + Bias_m^2)
-    
-    results <- data.frame(
-        Sex   = c("Female","Male"),
-        Linf  = c(Linf_f, Linf_m),
-        k     = c(fit_f$par["k"], fit_m$par["k"]),
-        SE    = c(SE_f, SE_m),
-        Bias  = c(Bias_f, Bias_m),
-        RMSE  = c(RMSE_f, RMSE_m),
-        NegLL = c(fit_f$value, fit_m$value),
-        Converged = c(
-            fit_f$convergence == 0,
-            fit_m$convergence == 0
-        )
-    )
-    
-    print(results)
-    invisible(results)
+
+laplace_logint <- function(f, lo, hi) {
+
+  opt <- try(optimize(function(u) -f(u), c(lo, hi)), silent = TRUE)
+  if (inherits(opt, "try-error")) return(-Inf)
+
+  u0 <- opt$minimum
+  f0 <- f(u0)
+  if (!is.finite(f0)) return(-Inf)
+
+  h <- 1e-4
+  fpp <- (f(u0 + h) - 2 * f0 + f(u0 - h)) / h^2
+
+  if (!is.finite(fpp) || fpp >= 0) return(-Inf)
+
+  f0 + 0.5 * log(2 * pi) - 0.5 * log(-fpp)
 }
+
+simulate_ind_MI <- function(
+  n_ind = 80,
+  n_obs = 10,
+  true
+) {
+
+  dat <- vector("list", n_ind * n_obs)
+  idx <- 1
+  id  <- 1
+
+  for (i in seq_len(n_ind)) {
+
+    Linf_i <- rlnorm(
+      1,
+      meanlog = log(true$Linf_mean) - 0.5 * true$Linf_sdlog^2,
+      sdlog   = true$Linf_sdlog
+    )
+
+    PL     <- runif(1, 40, 80)
+    Tminus <- runif(1, 0.5, 2)
+
+    for (j in seq_len(n_obs)) {
+
+      ## FIXED INT DESIGN
+      INT <- runif(1, 0.5, 2.5)
+
+      ## MI: Beta–Lognormal
+      mu <- 1 - exp(-true$k * INT)
+      mu <- pmin(pmax(mu, 1e-6), 1 - 1e-6)
+
+      a <- (true$zeta - 1) * mu
+      b <- (true$zeta - 1) * (1 - mu)
+
+      x   <- rbeta(1, a, b)
+      INC <- x * (Linf_i - PL)
+
+      dat[[idx]] <- data.frame(
+        LOBSTER = id,
+        PL      = PL,
+        INC     = INC,
+        INT     = INT
+      )
+      idx <- idx + 1
+
+      PL     <- PL + INC
+      Tminus <- INT
+    }
+
+    id <- id + 1
+  }
+
+  do.call(rbind, dat)
+}
+
+
+fit_ind_MI <- function(dat) {
+
+  nll <- function(par) {
+
+    k     <- par["k"]
+    zeta  <- par["zeta"]
+    mu_L  <- par["mu_L"]
+    sd_L  <- par["sd_L"]
+
+    if (k <= 0 || zeta <= 1 || sd_L <= 0)
+      return(1e10)
+
+    eps <- 1e-8
+    ll  <- 0
+
+    for (id in unique(dat$LOBSTER)) {
+
+      d <- dat[dat$LOBSTER == id, ]
+      maxPL <- max(d$PL)
+
+      f_u <- function(u) {
+
+        Linf <- exp(u)
+        if (Linf <= maxPL) return(-Inf)
+
+        ll_i <- dnorm(u, mu_L, sd_L, log = TRUE)
+
+        for (j in seq_len(nrow(d))) {
+
+          mu <- 1 - exp(-k * d$INT[j])
+          mu <- pmin(pmax(mu, eps), 1 - eps)
+
+          denom <- Linf - d$PL[j]
+          if (denom <= eps) return(-Inf)
+
+          x <- d$INC[j] / denom
+          if (x <= eps || x >= 1 - eps) return(-Inf)
+
+          a <- (zeta - 1) * mu
+          b <- (zeta - 1) * (1 - mu)
+
+          ll_i <- ll_i + dbeta(x, a, b, log = TRUE)
+        }
+
+        ll_i
+      }
+
+      lo <- log(maxPL + 1)
+      hi <- log(maxPL + 3 * exp(mu_L + 2 * sd_L))
+
+      logLi <- laplace_logint(f_u, lo, hi)
+      if (!is.finite(logLi)) return(1e10)
+
+      ll <- ll + logLi
+    }
+
+    -ll
+  }
+
+  init <- c(
+    k     = 0.25,
+    zeta  = 120,
+    mu_L  = log(mean(dat$PL) + 80),
+    sd_L  = 0.08
+  )
+
+  lower <- c(0.05, 50, log(60), 0.02)
+  upper <- c(0.8, 400, log(400), 0.4)
+
+  optim(init, nll, method = "L-BFGS-B",
+        lower = lower, upper = upper,
+        control = list(maxit = 1500))
+}
+
+
+extract_k_Linf <- function(fit) {
+  c(
+    Linf = exp(fit$par["mu_L"] + 0.5 * fit$par["sd_L"]^2),
+    k    = fit$par["k"]
+  )
+}
+
+## Monte Carlo (sex-specific)
+R <- 1000
+
+true_F <- list(
+  Linf_mean = 180,
+  Linf_sdlog = 0.08,
+  k = 0.28,
+  zeta = 120
+)
+
+true_M <- list(
+  Linf_mean = 210,
+  Linf_sdlog = 0.08,
+  k = 0.24,
+  zeta = 120
+)
+
+storeF <- matrix(NA_real_, R, 2, dimnames = list(NULL, c("Linf","k")))
+storeM <- matrix(NA_real_, R, 2, dimnames = list(NULL, c("Linf","k")))
+
+for (r in seq_len(R)) {
+
+  datF <- simulate_ind_MI(true = true_F)
+  datM <- simulate_ind_MI(true = true_M)
+
+  fitF <- try(fit_ind_MI(datF), silent = TRUE)
+  fitM <- try(fit_ind_MI(datM), silent = TRUE)
+
+  if (!inherits(fitF, "try-error") && fitF$convergence == 0)
+    storeF[r, ] <- extract_k_Linf(fitF)
+
+  if (!inherits(fitM, "try-error") && fitM$convergence == 0)
+    storeM[r, ] <- extract_k_Linf(fitM)
+
+  if (r %% 50 == 0)
+    cat("Completed", r, "\n")
+}
+
+## Monte Carlo summary
+
+MC_summary <- function(est, truth) {
+
+  est <- est[complete.cases(est), , drop = FALSE]
+
+  data.frame(
+    Parameter = colnames(est),
+    Mean  = colMeans(est),
+    SE    = apply(est, 2, sd),
+    Bias  = colMeans(est) - truth[colnames(est)],
+    RMSE  = sqrt(colMeans((est - truth[colnames(est)])^2))
+  )
+}
+
+print(MC_summary(storeF, c(Linf = 180, k = 0.28)))
+print(MC_summary(storeM, c(Linf = 210, k = 0.24)))
