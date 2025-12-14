@@ -113,7 +113,7 @@ simulate_lognormal <- function(R = 1000, n_f = 100, n_m = 100) {
 simulate_lognormal()
 
 ############Fixed Linf#############################
-simulate_fixed <- function(R = 2000, n_f = 50, n_m = 50) {
+simulate_fixed <- function(R = 1000, n_f = 50, n_m = 50) {
   
   set.seed(123)
   
