@@ -1,31 +1,206 @@
-##########Lognormal Linf###########################
-simulate_lognormal <- function(R = 1000, n_f = 100, n_m = 100) {
+simulate_lognormal <- function(R = 1000, n_f = 50, n_m = 50) {
     
     set.seed(123)
     
-    k_range_f    <- c(0.20, 0.50)
-    Linf_range_f <- c(150, 200)
+    k_f    <- 0.351
+    Linf_f <- 175.60
     
-    k_range_m    <- c(0.20, 0.50)
-    Linf_range_m <- c(150, 250)
+    k_m    <- 0.347
+    Linf_m <- 198.83
     
-    sigma_eps <- 1.5
-    sdlog_L   <- 0.05
+    ## lognormal dispersion for Linf
+    sdlog_L <- 0.10
     
-    t_obs <- sort(runif(6, 0.5, 10))
+    sigma_eps <- 10
+    
+    t_obs <- c(0.3, 0.8,1.5, 2.5,3,4,4.5)
     
     sim_data <- function(n, k_true, Linf_mean) {
-        mu_logn <- log(Linf_mean) - 0.5 * sdlog_L^2
-        Linf_i  <- rlnorm(n, mu_logn, sdlog_L)
         
-        do.call(rbind, lapply(seq_len(n), function(i) {
-            data.frame(
-                id = i,
-                t  = t_obs,
-                L  = Linf_i[i] * (1 - exp(-k_true * t_obs)) +
-                    rnorm(length(t_obs), 0, sigma_eps)
+        ## ensure E(Linf_i) = Linf_mean
+        mu_logn <- log(Linf_mean) - 0.5 * sdlog_L^2
+        Linf_i  <- rlnorm(n, meanlog = mu_logn, sdlog = sdlog_L)
+        
+        do.call(
+            rbind,
+            lapply(seq_len(n), function(i) {
+                data.frame(
+                    id = i,
+                    t  = t_obs,
+                    L  = Linf_i[i] * (1 - exp(-k_true * t_obs)) +
+                        rnorm(length(t_obs), 0, sigma_eps)
+                )
+            })
+        )
+    }
+    
+    nll <- function(par, dat) {
+        k    <- par[1]
+        Linf <- par[2]
+        
+        if (k <= 0 || Linf <= max(dat$L)) return(1e10)
+        
+        mu <- Linf * (1 - exp(-k * dat$t))
+        -sum(dnorm(dat$L, mu, sigma_eps, log = TRUE))
+    }
+    
+    khat_f    <- Linfhat_f <- numeric(R)
+    khat_m    <- Linfhat_m <- numeric(R)
+    
+    ktrue_f   <- Ltrue_f   <- numeric(R)
+    ktrue_m   <- Ltrue_m   <- numeric(R)
+    
+    for (r in seq_len(R)) {
+        
+        ## ----- FEMALE -----
+        dat_f <- sim_data(n_f, k_f, Linf_f)
+        
+        opt_f <- optim(
+            par    = c(k_f, Linf_f),
+            fn     = nll,
+            dat    = dat_f,
+            method = "L-BFGS-B",
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
+        )
+        khat_f[r]    <- opt_f$par[1]
+        Linfhat_f[r] <- opt_f$par[2]
+        
+        dat_m <- sim_data(n_m, k_m, Linf_m)
+        opt_m <- optim(
+            par    = c(k_m, Linf_m),
+            fn     = nll,
+            dat    = dat_m,
+            method = "L-BFGS-B",
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
+        )
+        
+        khat_m[r]    <- opt_m$par[1]
+        Linfhat_m[r] <- opt_m$par[2]
+        
+        ktrue_m[r] <- k_m
+        Ltrue_m[r] <- Linf_m
+    }
+    
+    summary_lognormal_sex <- rbind(
+        
+        data.frame(
+            Sex = "Female",
+            Parameter = c("k", "Linf"),
+            True = c(mean(ktrue_f), mean(Ltrue_f)),
+            Mean = c(mean(khat_f), mean(Linfhat_f)),
+            Bias = c(mean(khat_f - ktrue_f),
+                     mean(Linfhat_f - Ltrue_f)),
+            SE = c(sd(khat_f), sd(Linfhat_f)),
+            RMSE = c(
+                sqrt((mean(khat_f - ktrue_f))^2 + sd(khat_f)^2),
+                sqrt((mean(Linfhat_f - Ltrue_f))^2 + sd(Linfhat_f)^2)
             )
-        }))
+        ),
+        
+        data.frame(
+            Sex = "Male",
+            Parameter = c("k", "Linf"),
+            True = c(mean(ktrue_m), mean(Ltrue_m)),
+            Mean = c(mean(khat_m), mean(Linfhat_m)),
+            Bias = c(mean(khat_m - ktrue_m),
+                     mean(Linfhat_m - Ltrue_m)),
+            SE = c(sd(khat_m), sd(Linfhat_m)),
+            RMSE = c(
+                sqrt((mean(khat_m - ktrue_m))^2 + sd(khat_m)^2),
+                sqrt((mean(Linfhat_m - Ltrue_m))^2 + sd(Linfhat_m)^2)
+            )
+        )
+    )
+    summary_lognormal_sex <- rbind(
+        
+        data.frame(
+            Sex = "Female",
+            Parameter = c("k", "Linf"),
+            True = c(k_f, Linf_f),
+            Mean = c(mean(khat_f), mean(Linfhat_f)),
+            Bias = c(
+                mean(khat_f - k_f),
+                mean(Linfhat_f - Linf_f)
+            ),
+            SE = c(
+                sd(khat_f),
+                sd(Linfhat_f)
+            ),
+            RMSE = c(
+                sqrt(mean((khat_f - k_f)^2)),
+                sqrt(mean((Linfhat_f - Linf_f)^2))
+            ),
+            CI_low = c(
+                quantile(khat_f, 0.025),
+                quantile(Linfhat_f, 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_f, 0.975),
+                quantile(Linfhat_f, 0.975)
+            )
+        ),
+        
+        data.frame(
+            Sex = "Male",
+            Parameter = c("k", "Linf"),
+            True = c(k_m, Linf_m),
+            Mean = c(mean(khat_m), mean(Linfhat_m)),
+            Bias = c(
+                mean(khat_m - k_m),
+                mean(Linfhat_m - Linf_m)
+            ),
+            SE = c(
+                sd(khat_m),
+                sd(Linfhat_m)
+            ),
+            RMSE = c(
+                sqrt(mean((khat_m - k_m)^2)),
+                sqrt(mean((Linfhat_m - Linf_m)^2))
+            ),
+            CI_low = c(
+                quantile(khat_m, 0.025),
+                quantile(Linfhat_m, 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_m, 0.975),
+                quantile(Linfhat_m, 0.975)
+            )
+        )
+    )
+    
+    return(summary_lognormal_sex)
+}
+
+simulate_lognormal()
+
+############Fixed Linf#############################
+simulate_fixed <- function(R = 1000, n_f = 50, n_m = 50) {
+    
+    set.seed(123)
+    
+    k_f    <- 0.351
+    Linf_f <- 175.60
+    
+    k_m    <- 0.347
+    Linf_m <- 198.83
+    
+    sigma_eps <- 10
+    t_obs <- c(0.4, 2)
+    
+    sim_data <- function(n, k_true, Linf_true) {
+        do.call(
+            rbind,
+            lapply(seq_len(n), function(i) {
+                data.frame(
+                    id = i,
+                    t  = t_obs,
+                    L  = Linf_true * (1 - exp(-k_true * t_obs)) +
+                        rnorm(length(t_obs), 0, sigma_eps)
+                )
+            })
+        )
     }
     
     nll <- function(par, dat) {
@@ -36,212 +211,130 @@ simulate_lognormal <- function(R = 1000, n_f = 100, n_m = 100) {
         -sum(dnorm(dat$L, mu, sigma_eps, log = TRUE))
     }
     
-    ## storage
-    khat_f    <- Linfhat_f <- numeric(R)
-    khat_m    <- Linfhat_m <- numeric(R)
-    ktrue_f   <- Ltrue_f   <- numeric(R)
-    ktrue_m   <- Ltrue_m   <- numeric(R)
+    khat_f <- Linfhat_f <- numeric(R)
+    khat_m <- Linfhat_m <- numeric(R)
     
     for (r in seq_len(R)) {
         
-        ## Female
-        kf <- runif(1, k_range_f[1], k_range_f[2])
-        Lf <- runif(1, Linf_range_f[1], Linf_range_f[2])
-        dat_f <- sim_data(n_f, kf, Lf)
-        
+        dat_f <- sim_data(n_f, k_f, Linf_f)
         opt_f <- optim(
-            c(mean(k_range_f), mean(Linf_range_f)),
-            nll, dat = dat_f,
+            par    = c(k_f, Linf_f),
+            fn     = nll,
+            dat    = dat_f,
             method = "L-BFGS-B",
-            lower = c(k_range_f[1], Linf_range_f[1]),
-            upper = c(k_range_f[2], Linf_range_f[2])
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
         )
-        
         khat_f[r]    <- opt_f$par[1]
         Linfhat_f[r] <- opt_f$par[2]
-        ktrue_f[r]   <- kf
-        Ltrue_f[r]   <- Lf
         
-        ## Male
-        km <- runif(1, k_range_m[1], k_range_m[2])
-        Lm <- runif(1, Linf_range_m[1], Linf_range_m[2])
-        dat_m <- sim_data(n_m, km, Lm)
-        
+        dat_m <- sim_data(n_m, k_m, Linf_m)
         opt_m <- optim(
-            c(mean(k_range_m), mean(Linf_range_m)),
-            nll, dat = dat_m,
+            par    = c(k_m, Linf_m),
+            fn     = nll,
+            dat    = dat_m,
             method = "L-BFGS-B",
-            lower = c(k_range_m[1], Linf_range_m[1]),
-            upper = c(k_range_m[2], Linf_range_m[2])
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
         )
-        
         khat_m[r]    <- opt_m$par[1]
         Linfhat_m[r] <- opt_m$par[2]
-        ktrue_m[r]   <- km
-        Ltrue_m[r]   <- Lm
     }
     
-    summary_sex <- rbind(
+    ## Remove boundary-hitting fits
+    valid_f <- Linfhat_f < 399 & khat_f < 0.99
+    valid_m <- Linfhat_m < 399 & khat_m < 0.99
+    
+    summary <- rbind(
         data.frame(
             Sex = "Female",
             Parameter = c("k", "Linf"),
-            True = c(mean(ktrue_f), mean(Ltrue_f)),
-            Mean = c(mean(khat_f), mean(Linfhat_f)),
-            Bias = c(mean(khat_f - ktrue_f),
-                     mean(Linfhat_f - Ltrue_f)),
-            SE = c(sd(khat_f), sd(Linfhat_f)),
-            RMSE = c(
-                sqrt((mean(khat_f - ktrue_f))^2+(sd(khat_f))^2), 
-                sqrt((mean(Linfhat_f - Ltrue_f))^2+(sd(Linfhat_f))^2))
+            True = c(k_f, Linf_f),
+            Mean = c(
+                mean(khat_f[valid_f]),
+                mean(Linfhat_f[valid_f])
             ),
+            Bias = c(
+                mean(khat_f[valid_f] - k_f),
+                mean(Linfhat_f[valid_f] - Linf_f)
+            ),
+            SE = c(
+                sd(khat_f[valid_f]),
+                sd(Linfhat_f[valid_f])
+            ),
+            RMSE = c(
+                sqrt(mean((khat_f[valid_f] - k_f)^2)),
+                sqrt(mean((Linfhat_f[valid_f] - Linf_f)^2))
+            ),
+            CI_low = c(
+                quantile(khat_f[valid_f], 0.025),
+                quantile(Linfhat_f[valid_f], 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_f[valid_f], 0.975),
+                quantile(Linfhat_f[valid_f], 0.975)
+            )
+        ),
         data.frame(
             Sex = "Male",
             Parameter = c("k", "Linf"),
-            True = c(mean(ktrue_m), mean(Ltrue_m)),
-            Mean = c(mean(khat_m), mean(Linfhat_m)),
-            Bias = c(mean(khat_m - ktrue_m),
-                     mean(Linfhat_m - Ltrue_m)),
-            SE = c(sd(khat_m), sd(Linfhat_m)),
+            True = c(k_m, Linf_m),
+            Mean = c(
+                mean(khat_m[valid_m]),
+                mean(Linfhat_m[valid_m])
+            ),
+            Bias = c(
+                mean(khat_m[valid_m] - k_m),
+                mean(Linfhat_m[valid_m] - Linf_m)
+            ),
+            SE = c(
+                sd(khat_m[valid_m]),
+                sd(Linfhat_m[valid_m])
+            ),
             RMSE = c(
-                sqrt((mean(khat_m - ktrue_m))^2+(sd(khat_m))^2), 
-                sqrt((mean(Linfhat_m - Ltrue_m))^2+(sd(Linfhat_m))^2))
+                sqrt(mean((khat_m[valid_m] - k_m)^2)),
+                sqrt(mean((Linfhat_m[valid_m] - Linf_m)^2))
+            ),
+            CI_low = c(
+                quantile(khat_m[valid_m], 0.025),
+                quantile(Linfhat_m[valid_m], 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_m[valid_m], 0.975),
+                quantile(Linfhat_m[valid_m], 0.975)
             )
-    )
-    
-    return(summary_sex)
-}
-simulate_lognormal()
-
-############Fixed Linf#############################
-simulate_fixed <- function(R = 1000, n_f = 50, n_m = 50) {
-  
-  set.seed(123)
-  
-  k_f    <- 0.351
-  Linf_f <- 175.60
-  
-  k_m    <- 0.347
-  Linf_m <- 198.83
-  
-  sigma_eps <- 10
-  t_obs <- c(0.4, 2)
-  
-  sim_data <- function(n, k_true, Linf_true) {
-    do.call(
-      rbind,
-      lapply(seq_len(n), function(i) {
-        data.frame(
-          id = i,
-          t  = t_obs,
-          L  = Linf_true * (1 - exp(-k_true * t_obs)) +
-            rnorm(length(t_obs), 0, sigma_eps)
         )
-      })
     )
-  }
-  
-  nll <- function(par, dat) {
-    k    <- par[1]
-    Linf <- par[2]
-    if (k <= 0 || Linf <= max(dat$L)) return(1e10)
-    mu <- Linf * (1 - exp(-k * dat$t))
-    -sum(dnorm(dat$L, mu, sigma_eps, log = TRUE))
-  }
-  
-  khat_f <- Linfhat_f <- numeric(R)
-  khat_m <- Linfhat_m <- numeric(R)
-  
-  for (r in seq_len(R)) {
     
-    dat_f <- sim_data(n_f, k_f, Linf_f)
-    opt_f <- optim(
-      par    = c(k_f, Linf_f),
-      fn     = nll,
-      dat    = dat_f,
-      method = "L-BFGS-B",
-      lower  = c(0.05, 50),
-      upper  = c(1.0, 400)
-    )
-    khat_f[r]    <- opt_f$par[1]
-    Linfhat_f[r] <- opt_f$par[2]
-    
-    dat_m <- sim_data(n_m, k_m, Linf_m)
-    opt_m <- optim(
-      par    = c(k_m, Linf_m),
-      fn     = nll,
-      dat    = dat_m,
-      method = "L-BFGS-B",
-      lower  = c(0.05, 50),
-      upper  = c(1.0, 400)
-    )
-    khat_m[r]    <- opt_m$par[1]
-    Linfhat_m[r] <- opt_m$par[2]
-  }
-  
-  ## Remove boundary-hitting fits
-  valid_f <- Linfhat_f < 399 & khat_f < 0.99
-  valid_m <- Linfhat_m < 399 & khat_m < 0.99
-  
-  summary <- rbind(
-    data.frame(
-      Sex = "Female",
-      Parameter = c("k", "Linf"),
-      True = c(k_f, Linf_f),
-      Mean = c(mean(khat_f[valid_f]), mean(Linfhat_f[valid_f])),
-      SE   = c(sd(khat_f[valid_f]), sd(Linfhat_f[valid_f])),
-      CI_low  = c(
-        quantile(khat_f[valid_f], 0.025),
-        quantile(Linfhat_f[valid_f], 0.025)
-      ),
-      CI_high = c(
-        quantile(khat_f[valid_f], 0.975),
-        quantile(Linfhat_f[valid_f], 0.975)
-      )
-    ),
-    data.frame(
-      Sex = "Male",
-      Parameter = c("k", "Linf"),
-      True = c(k_m, Linf_m),
-      Mean = c(mean(khat_m[valid_m]), mean(Linfhat_m[valid_m])),
-      SE   = c(sd(khat_m[valid_m]), sd(Linfhat_m[valid_m])),
-      CI_low  = c(
-        quantile(khat_m[valid_m], 0.025),
-        quantile(Linfhat_m[valid_m], 0.025)
-      ),
-      CI_high = c(
-        quantile(khat_m[valid_m], 0.975),
-        quantile(Linfhat_m[valid_m], 0.975)
-      )
-    )
-  )
-  
-  return(summary)
+    return(summary)
 }
-
+simulate_fixed()
 
 ########################Gamma Linf##############################
-simulate_gamma <- function(R = 1000, n_f = 100, n_m = 100) {
+simulate_gamma <- function(R = 1000, n_f = 50, n_m = 50) {
     
     set.seed(123)
     
-    k_range_f    <- c(0.20, 0.50)
-    Linf_range_f <- c(151.5, 200)
+    k_f    <- 0.351
+    Linf_f <- 175.60
     
-    k_range_m    <- c(0.20, 0.50)
-    Linf_range_m <- c(150, 249)
+    k_m    <- 0.347
+    Linf_m <- 198.83
     
-    sigma_eps <- 1.5
-    
-    ## Gamma RE dispersion (fixed)
-    shape_L <- 200   # larger = less dispersion
+    ## Gamma dispersion for Linf
+    shape_L  <- 200
+    sigma_eps <- 10
     
     ## Observation times
-    t_obs <- sort(runif(6, 0.5, 10))
+    t_obs <- c(0.3, 0.8, 1.5, 2.5, 3, 4, 4.5)
     
     sim_data <- function(n, k_true, Linf_mean) {
         
-        scale_L <- Linf_mean / shape_L
-        Linf_i  <- rgamma(n, shape = shape_L, scale = scale_L)
+        Linf_i <- rgamma(
+            n,
+            shape = shape_L,
+            scale = Linf_mean / shape_L
+        )
         
         do.call(
             rbind,
@@ -264,116 +357,119 @@ simulate_gamma <- function(R = 1000, n_f = 100, n_m = 100) {
         if (k <= 0 || Linf <= max(dat$L)) return(1e10)
         
         mu <- Linf * (1 - exp(-k * dat$t))
+        
         -sum(dnorm(dat$L, mu, sigma_eps, log = TRUE))
     }
     
     khat_f    <- Linfhat_f <- numeric(R)
     khat_m    <- Linfhat_m <- numeric(R)
     
-    ktrue_f   <- Ltrue_f   <- numeric(R)
-    ktrue_m   <- Ltrue_m   <- numeric(R)
-    
     for (r in seq_len(R)) {
         
         ## ----- FEMALE -----
-        kf <- runif(1, k_range_f[1], k_range_f[2])
-        Lf <- runif(1, Linf_range_f[1], Linf_range_f[2])
-        
-        dat_f <- sim_data(n_f, kf, Lf)
+        dat_f <- sim_data(n_f, k_f, Linf_f)
         
         opt_f <- optim(
-            par    = c(mean(k_range_f), mean(Linf_range_f)),
+            par    = c(k_f, Linf_f),
             fn     = nll,
             dat    = dat_f,
             method = "L-BFGS-B",
-            lower  = c(k_range_f[1], Linf_range_f[1]),
-            upper  = c(k_range_f[2], Linf_range_f[2])
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
         )
         
         khat_f[r]    <- opt_f$par[1]
         Linfhat_f[r] <- opt_f$par[2]
-        ktrue_f[r]   <- kf
-        Ltrue_f[r]   <- Lf   # E(Linf_i)
         
         ## ----- MALE -----
-        km <- runif(1, k_range_m[1], k_range_m[2])
-        Lm <- runif(1, Linf_range_m[1], Linf_range_m[2])
-        
-        dat_m <- sim_data(n_m, km, Lm)
+        dat_m <- sim_data(n_m, k_m, Linf_m)
         
         opt_m <- optim(
-            par    = c(mean(k_range_m), mean(Linf_range_m)),
+            par    = c(k_m, Linf_m),
             fn     = nll,
             dat    = dat_m,
             method = "L-BFGS-B",
-            lower  = c(k_range_m[1], Linf_range_m[1]),
-            upper  = c(k_range_m[2], Linf_range_m[2])
+            lower  = c(0.05, 50),
+            upper  = c(1.0, 400)
         )
         
         khat_m[r]    <- opt_m$par[1]
         Linfhat_m[r] <- opt_m$par[2]
-        ktrue_m[r]   <- km
-        Ltrue_m[r]   <- Lm   # E(Linf_i)
     }
     
-    summary_gamma_sex <- rbind(
+    valid_f <- Linfhat_f < 399 & khat_f < 0.99
+    valid_m <- Linfhat_m < 399 & khat_m < 0.99
+    
+    summary_gamma <- rbind(
+        
         data.frame(
             Sex = "Female",
             Parameter = c("k", "Linf"),
-            True = c(
-                mean(ktrue_f),
-                mean(Ltrue_f)
-            ),
+            True = c(k_f, Linf_f),
             Mean = c(
-                mean(khat_f),
-                mean(Linfhat_f)
+                mean(khat_f[valid_f]),
+                mean(Linfhat_f[valid_f])
             ),
             Bias = c(
-                mean(khat_f - ktrue_f),
-                mean(Linfhat_f - Ltrue_f)
+                mean(khat_f[valid_f] - k_f),
+                mean(Linfhat_f[valid_f] - Linf_f)
             ),
             SE = c(
-                sd(khat_f),
-                sd(Linfhat_f)
+                sd(khat_f[valid_f]),
+                sd(Linfhat_f[valid_f])
             ),
             RMSE = c(
-                sqrt((mean(khat_f - ktrue_f))^2+(sd(khat_f))^2), 
-                sqrt((mean(Linfhat_f - Ltrue_f))^2+(sd(Linfhat_f))^2))
-            
+                sqrt((mean(khat_f[valid_f] - k_f))^2 +
+                         sd(khat_f[valid_f])^2),
+                sqrt((mean(Linfhat_f[valid_f] - Linf_f))^2 +
+                         sd(Linfhat_f[valid_f])^2)
+            ),
+            CI_low = c(
+                quantile(khat_f[valid_f], 0.025),
+                quantile(Linfhat_f[valid_f], 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_f[valid_f], 0.975),
+                quantile(Linfhat_f[valid_f], 0.975)
+            )
         ),
+        
         data.frame(
             Sex = "Male",
             Parameter = c("k", "Linf"),
-            True = c(
-                mean(ktrue_m),
-                mean(Ltrue_m)
-            ),
+            True = c(k_m, Linf_m),
             Mean = c(
-                mean(khat_m),
-                mean(Linfhat_m)
+                mean(khat_m[valid_m]),
+                mean(Linfhat_m[valid_m])
             ),
             Bias = c(
-                mean(khat_m - ktrue_m),
-                mean(Linfhat_m - Ltrue_m)
+                mean(khat_m[valid_m] - k_m),
+                mean(Linfhat_m[valid_m] - Linf_m)
             ),
             SE = c(
-                sd(khat_m),
-                sd(Linfhat_m)
+                sd(khat_m[valid_m]),
+                sd(Linfhat_m[valid_m])
             ),
             RMSE = c(
-                sqrt((mean(khat_m - ktrue_m))^2+(sd(khat_m))^2), 
-                sqrt((mean(Linfhat_m - Ltrue_m))^2+(sd(Linfhat_m))^2))
+                sqrt((mean(khat_m[valid_m] - k_m))^2 +
+                         sd(khat_m[valid_m])^2),
+                sqrt((mean(Linfhat_m[valid_m] - Linf_m))^2 +
+                         sd(Linfhat_m[valid_m])^2)
+            ),
+            CI_low = c(
+                quantile(khat_m[valid_m], 0.025),
+                quantile(Linfhat_m[valid_m], 0.025)
+            ),
+            CI_high = c(
+                quantile(khat_m[valid_m], 0.975),
+                quantile(Linfhat_m[valid_m], 0.975)
             )
         )
+    )
     
-    
-    return(summary_gamma_sex)
+    return(summary_gamma)
 }
-
-res_gamma <- simulate_gamma()
-res_gamma
-
-
+simulate_gamma()
 
 ################Independent model########################
 
