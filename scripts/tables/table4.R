@@ -243,6 +243,9 @@ out_gamma     <- run_mc(R_mc, sim_fun_gamma,
                         t_obs = t_obs_long, sigma_eps = sigma_eps,
                         sdlog_L = sdlog_L, shape_L = shape_L, label = "Gamma")
 
-print(FIXED);     print(out_fixed$summary)
-print(LOGNORMAL); print(out_lognormal$summary)
-print( GAMMA);     print(out_gamma$summary)
+#print(FIXED);     
+print(out_fixed$summary)
+#print(LOGNORMAL); 
+print(out_lognormal$summary)
+#print( GAMMA);     
+print(out_gamma$summary)
