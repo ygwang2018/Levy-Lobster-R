@@ -1,0 +1,23 @@
+library(dplyr)
+library(tidyr)
+
+lob <- lobster  
+
+lob <- lob %>% filter(SEX %in% c(1, 2))
+
+lob$SEX <- factor(lob$SEX,
+                  levels = c(1, 2),
+                  labels = c("Female", "Male"))
+
+moult_df <- lob %>%
+  group_by(LOBSTER, SEX) %>%
+  summarise(n_obs = n(), .groups = "drop") %>%
+  mutate(moults = n_obs - 1)
+
+moult_df$moults <- factor(moult_df$moults)
+
+moult_table <- table(moult_df$SEX, moult_df$moults)
+
+moult_table
+
+
