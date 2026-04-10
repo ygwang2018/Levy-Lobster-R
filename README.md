@@ -16,16 +16,10 @@ This repository is designed for researchers, students, and data scientists inter
 
 ## Repository Structure
 Levy-Lobster-R/
-├── scripts/
-│   ├── fig3.R
-│   ├── fig4.R
-│   ├── fig6.R
-│   └── fig7.R
-│
 ├── scripts/plots/
 │   ├── fig1.R
-│   ├── fig2.R
-│   ├── fig5.R
+│   ├── fig3.R
+│   ├── fig4.R
 │
 ├── scripts/tables/
 │   ├── table1
