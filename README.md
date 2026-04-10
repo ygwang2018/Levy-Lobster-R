@@ -28,6 +28,7 @@ Levy-Lobster-R/
 │   ├── fig5.R
 │
 ├── scripts/tables/
+│   ├── table1
 │   ├── table2_bg_model.R
 │   ├── table2_bl_model.R
 │   ├── table2_gg_model.R
@@ -41,9 +42,6 @@ Levy-Lobster-R/
 │   ├── table4.R
 │   ├── table5_independent_model.R
 │   └── table5_joint_models.R
-│
-├── data/
-│   └── lobster.csv
 │
 ├── results/
 │   ├── tables/
