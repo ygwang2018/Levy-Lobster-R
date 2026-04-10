@@ -30,12 +30,11 @@ Levy-Lobster-R/
 │   ├── table2_bf.R
 │   ├── table2_gf.R
 │   ├── table2_igf.R
+│   ├── supplementary_Table1.R
 │   ├── supplementary_bg_model.R
 │   ├── supplementary_bl_model.R
 │   ├── table3.R
 │   ├── table4.R
-│   ├── table5_independent_model.R
-│   └── table5_joint_models.R
 │
 ├── results/
 │   ├── tables/
